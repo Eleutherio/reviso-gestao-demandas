@@ -145,6 +145,18 @@
             Eventos
           </button>
         </li>
+        <li class="nav-item" role="presentation">
+          <button
+            class="nav-link"
+            id="tab-relatorios"
+            data-bs-toggle="pill"
+            data-bs-target="#pane-relatorios"
+            type="button"
+            role="tab"
+          >
+            Relatórios
+          </button>
+        </li>
       </ul>
 
       <div class="tab-content" id="tabContent">
@@ -737,6 +749,87 @@
                 </button>
               </div>
               <div id="eventsList"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="tab-pane fade" id="pane-relatorios" role="tabpanel">
+          <div class="card card-shadow mb-3">
+            <div class="card-body">
+              <h5 class="card-title">Período de análise</h5>
+              <div class="row g-2 mb-3">
+                <div class="col-md-4">
+                  <label class="form-label">De</label>
+                  <input
+                    type="datetime-local"
+                    class="form-control"
+                    id="reportFrom"
+                  />
+                </div>
+                <div class="col-md-4">
+                  <label class="form-label">Até</label>
+                  <input
+                    type="datetime-local"
+                    class="form-control"
+                    id="reportTo"
+                  />
+                </div>
+                <div class="col-md-4 d-flex align-items-end">
+                  <button class="btn btn-primary w-100" onclick="loadReports()">
+                    Carregar relatórios
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="row g-3">
+            <div class="col-md-6 col-lg-3">
+              <div class="card card-shadow">
+                <div class="card-body">
+                  <h6 class="card-title text-muted">Requisições atrasadas</h6>
+                  <div class="display-5" id="overdueTotal">-</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="col-md-6 col-lg-3">
+              <div class="card card-shadow">
+                <div class="card-body">
+                  <h6 class="card-title text-muted">Tempo médio de ciclo</h6>
+                  <div class="display-5" id="avgCycleTime">-</div>
+                  <small class="text-muted" id="avgCycleDetails"></small>
+                </div>
+              </div>
+            </div>
+
+            <div class="col-md-6 col-lg-3">
+              <div class="card card-shadow">
+                <div class="card-body">
+                  <h6 class="card-title text-muted">Retrabalho (%)</h6>
+                  <div class="display-5" id="reworkPercentage">-</div>
+                  <small class="text-muted" id="reworkDetails"></small>
+                </div>
+              </div>
+            </div>
+
+            <div class="col-md-6 col-lg-3">
+              <div class="card card-shadow">
+                <div class="card-body">
+                  <h6 class="card-title text-muted">Total no período</h6>
+                  <div class="display-5" id="totalRequests">-</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="card card-shadow mt-3">
+            <div class="card-body">
+              <h6 class="card-title">Requisições por status</h6>
+              <div
+                id="statusChart"
+                style="max-height: 300px; overflow-y: auto"
+              ></div>
             </div>
           </div>
         </div>
@@ -1352,6 +1445,137 @@
         listClients();
         clearFilters();
         advancedSearch();
+        initReports();
+      }
+
+      function initReports() {
+        const now = new Date();
+        const thirtyDaysAgo = new Date(
+          now.getTime() - 30 * 24 * 60 * 60 * 1000
+        );
+        document.getElementById("reportFrom").valueAsDate = thirtyDaysAgo;
+        document.getElementById("reportTo").valueAsDate = now;
+      }
+
+      async function loadReports() {
+        const from = document.getElementById("reportFrom").value;
+        const to = document.getElementById("reportTo").value;
+        if (!from || !to) {
+          showToast("Defina o período", "warning");
+          return;
+        }
+        const fromISO = new Date(from).toISOString();
+        const toISO = new Date(to).toISOString();
+        try {
+          await Promise.all([
+            loadOverdue(toISO),
+            loadAvgCycleTime(fromISO, toISO),
+            loadReworkMetrics(fromISO, toISO),
+            loadRequestsByStatus(fromISO, toISO),
+          ]);
+          showToast("Relatórios carregados", "success");
+        } catch (e) {
+          showToast("Erro ao carregar relatórios", "danger");
+        }
+      }
+
+      async function loadOverdue(at) {
+        try {
+          const res = await fetch(
+            `${API_URL}/reports/overdue?at=${encodeURIComponent(at)}`
+          );
+          const data = await res.json();
+          document.getElementById("overdueTotal").textContent = data.total;
+        } catch (e) {
+          console.error("Erro ao carregar atrasadas:", e);
+        }
+      }
+
+      async function loadAvgCycleTime(from, to) {
+        try {
+          const res = await fetch(
+            `${API_URL}/reports/avg-cycle-time?from=${encodeURIComponent(
+              from
+            )}&to=${encodeURIComponent(to)}`
+          );
+          const data = await res.json();
+          const days = data.avgDays;
+          const hours = data.avgHours;
+          document.getElementById(
+            "avgCycleTime"
+          ).textContent = `${days}d ${hours}h`;
+          document.getElementById(
+            "avgCycleDetails"
+          ).textContent = `${data.avgSeconds.toFixed(0)} segundos`;
+        } catch (e) {
+          console.error("Erro ao carregar ciclo:", e);
+        }
+      }
+
+      async function loadReworkMetrics(from, to) {
+        try {
+          const res = await fetch(
+            `${API_URL}/reports/rework-metrics?from=${encodeURIComponent(
+              from
+            )}&to=${encodeURIComponent(to)}`
+          );
+          const data = await res.json();
+          const pct = data.reworkPercentage.toFixed(1);
+          document.getElementById("reworkPercentage").textContent = `${pct}%`;
+          document.getElementById(
+            "reworkDetails"
+          ).textContent = `${data.reworkCount} de ${data.totalCount}`;
+          document.getElementById("totalRequests").textContent =
+            data.totalCount;
+        } catch (e) {
+          console.error("Erro ao carregar retrabalho:", e);
+        }
+      }
+
+      async function loadRequestsByStatus(from, to) {
+        try {
+          const res = await fetch(
+            `${API_URL}/reports/requests-by-status?from=${encodeURIComponent(
+              from
+            )}&to=${encodeURIComponent(to)}`
+          );
+          const data = await res.json();
+          renderStatusChart(data);
+        } catch (e) {
+          console.error("Erro ao carregar status:", e);
+        }
+      }
+
+      function renderStatusChart(statusData) {
+        const container = document.getElementById("statusChart");
+        if (!statusData || statusData.length === 0) {
+          container.innerHTML = '<p class="text-muted">Nenhum dado</p>';
+          return;
+        }
+        const statusLabels = {
+          NEW: "Novo",
+          IN_PROGRESS: "Em progresso",
+          IN_REVIEW: "Em revisão",
+          CHANGES_REQUESTED: "Mudanças solicitadas",
+          APPROVED: "Aprovado",
+          DELIVERED: "Entregue",
+          CLOSED: "Encerrado",
+        };
+        let html = '<table class="table table-sm align-middle"><tbody>';
+        statusData.forEach((item) => {
+          const label = statusLabels[item.status] || item.status;
+          const pct =
+            statusData.reduce((sum, s) => sum + s.total, 0) > 0
+              ? (
+                  (item.total /
+                    statusData.reduce((sum, s) => sum + s.total, 0)) *
+                  100
+                ).toFixed(0)
+              : 0;
+          html += `<tr><td>${label}</td><td><strong>${item.total}</strong></td><td><small class="text-muted">${pct}%</small></td></tr>`;
+        });
+        html += "</tbody></table>";
+        container.innerHTML = html;
       }
 
       document.addEventListener("DOMContentLoaded", init);
