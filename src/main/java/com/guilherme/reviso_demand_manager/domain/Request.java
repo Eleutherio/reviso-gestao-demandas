@@ -4,11 +4,22 @@ import jakarta.persistence.*;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 import java.time.OffsetDateTime;
+import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 @Entity
 @Table(name = "requests")
 public class Request {
+
+    private static final Map<RequestStatus, Set<RequestStatus>> ALLOWED_TRANSITIONS = Map.of(
+            RequestStatus.NEW, Set.of(RequestStatus.IN_PROGRESS),
+            RequestStatus.IN_PROGRESS, Set.of(RequestStatus.IN_REVIEW),
+            RequestStatus.IN_REVIEW, Set.of(RequestStatus.APPROVED, RequestStatus.CHANGES_REQUESTED),
+            RequestStatus.CHANGES_REQUESTED, Set.of(RequestStatus.IN_PROGRESS),
+            RequestStatus.APPROVED, Set.of(RequestStatus.DELIVERED),
+            RequestStatus.DELIVERED, Set.of(RequestStatus.CLOSED)
+    );
 
     @Id
     @Column(columnDefinition = "UUID")
@@ -123,6 +134,24 @@ public class Request {
     }
 
     public void setStatus(RequestStatus status) {
+        if (status == null) {
+            throw new IllegalArgumentException("Status cannot be null");
+        }
+
+        if (this.status == null) {
+            this.status = status;
+            return;
+        }
+
+        if (this.status == status) {
+            return; // idempotent
+        }
+
+        Set<RequestStatus> allowed = ALLOWED_TRANSITIONS.getOrDefault(this.status, Set.of());
+        if (!allowed.contains(status)) {
+            throw new IllegalStateException("Transition from " + this.status + " to " + status + " is not allowed");
+        }
+
         this.status = status;
     }
 
