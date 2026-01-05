@@ -494,13 +494,20 @@
         document.getElementById("requestLoading").style.display = "block";
 
         try {
+          // Converte datetime-local para ISO 8601 com timezone
+          let dueDateISO = undefined;
+          if (dueDate) {
+            const localDate = new Date(dueDate);
+            dueDateISO = localDate.toISOString(); // Formato: 2026-01-05T19:59:00.000Z
+          }
+
           const body = {
             clientId,
             title,
             description: description || undefined,
             type: type || undefined,
             priority: priority || undefined,
-            dueDate: dueDate ? dueDate : undefined,
+            dueDate: dueDateISO,
           };
 
           // Remove undefined values
