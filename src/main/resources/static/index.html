@@ -375,21 +375,133 @@
         ></div>
 
         <h3 style="margin-top: 30px; margin-bottom: 10px">
-          Buscar Requisições por Cliente
+          🔍 Busca Avançada de Requisições
         </h3>
-        <div class="form-group">
-          <label for="clientIdSearch">ID do Cliente</label>
-          <input
-            type="text"
-            id="clientIdSearch"
-            placeholder="UUID do cliente"
-          />
+
+        <div
+          style="
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 15px;
+          "
+        >
+          <div class="form-group">
+            <label for="filterClientId">ID do Cliente</label>
+            <input
+              type="text"
+              id="filterClientId"
+              placeholder="UUID do cliente"
+            />
+          </div>
+
+          <div class="form-group">
+            <label for="filterStatus">Status</label>
+            <select id="filterStatus">
+              <option value="">Todos</option>
+              <option value="NEW">NEW</option>
+              <option value="IN_PROGRESS">IN_PROGRESS</option>
+              <option value="IN_REVIEW">IN_REVIEW</option>
+              <option value="CHANGES_REQUESTED">CHANGES_REQUESTED</option>
+              <option value="APPROVED">APPROVED</option>
+              <option value="DELIVERED">DELIVERED</option>
+              <option value="CLOSED">CLOSED</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="filterPriority">Prioridade</label>
+            <select id="filterPriority">
+              <option value="">Todas</option>
+              <option value="LOW">LOW</option>
+              <option value="MEDIUM">MEDIUM</option>
+              <option value="HIGH">HIGH</option>
+              <option value="URGENT">URGENT</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="filterType">Tipo</label>
+            <select id="filterType">
+              <option value="">Todos</option>
+              <option value="POST">POST</option>
+              <option value="STORY">STORY</option>
+              <option value="BANNER">BANNER</option>
+              <option value="LANDING_PAGE">LANDING_PAGE</option>
+              <option value="TRAFFIC">TRAFFIC</option>
+              <option value="EMAIL">EMAIL</option>
+              <option value="VIDEO">VIDEO</option>
+              <option value="OTHER">OTHER</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="filterCreatedFrom">Criado de</label>
+            <input type="datetime-local" id="filterCreatedFrom" />
+          </div>
+
+          <div class="form-group">
+            <label for="filterCreatedTo">Criado até</label>
+            <input type="datetime-local" id="filterCreatedTo" />
+          </div>
+
+          <div class="form-group">
+            <label for="filterDueBefore">Vencimento até</label>
+            <input type="datetime-local" id="filterDueBefore" />
+          </div>
+
+          <div class="form-group">
+            <label for="filterPage">Página</label>
+            <input
+              type="number"
+              id="filterPage"
+              placeholder="0"
+              min="0"
+              value="0"
+            />
+          </div>
+
+          <div class="form-group">
+            <label for="filterSize">Itens por página</label>
+            <input
+              type="number"
+              id="filterSize"
+              placeholder="20"
+              min="1"
+              max="100"
+              value="20"
+            />
+          </div>
+
+          <div class="form-group">
+            <label for="filterSortBy">Ordenar por</label>
+            <select id="filterSortBy">
+              <option value="createdAt">Criado em</option>
+              <option value="dueDate">Vencimento</option>
+              <option value="title">Título</option>
+              <option value="priority">Prioridade</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="filterDirection">Direção</label>
+            <select id="filterDirection">
+              <option value="desc">Descendente</option>
+              <option value="asc">Ascendente</option>
+            </select>
+          </div>
         </div>
-        <button onclick="getRequestsByClient()">Buscar Requisições</button>
-        <div class="loading" id="searchLoading">Carregando...</div>
+
+        <button onclick="advancedSearch()" style="margin-right: 10px">
+          🔍 Buscar
+        </button>
+        <button onclick="clearFilters()" style="background: #6c757d">
+          🔄 Limpar
+        </button>
+        <div class="loading" id="advancedSearchLoading">Carregando...</div>
         <div
           class="response"
-          id="searchResponse"
+          id="advancedSearchResponse"
           style="display: none; margin-top: 15px"
         ></div>
       </div>
@@ -577,8 +689,94 @@
         }
       }
 
-      function renderRequestsList(data) {
-        const container = document.getElementById("searchResponse");
+      function clearFilters() {
+        document.getElementById("filterClientId").value = "";
+        document.getElementById("filterStatus").value = "";
+        document.getElementById("filterPriority").value = "";
+        document.getElementById("filterType").value = "";
+        document.getElementById("filterCreatedFrom").value = "";
+        document.getElementById("filterCreatedTo").value = "";
+        document.getElementById("filterDueBefore").value = "";
+        document.getElementById("filterPage").value = "0";
+        document.getElementById("filterSize").value = "20";
+        document.getElementById("filterSortBy").value = "createdAt";
+        document.getElementById("filterDirection").value = "desc";
+        document.getElementById("advancedSearchResponse").style.display =
+          "none";
+      }
+
+      async function advancedSearch() {
+        const clientId = document.getElementById("filterClientId").value;
+        const status = document.getElementById("filterStatus").value;
+        const priority = document.getElementById("filterPriority").value;
+        const type = document.getElementById("filterType").value;
+        const createdFrom = document.getElementById("filterCreatedFrom").value;
+        const createdTo = document.getElementById("filterCreatedTo").value;
+        const dueBefore = document.getElementById("filterDueBefore").value;
+        const page = document.getElementById("filterPage").value || "0";
+        const size = document.getElementById("filterSize").value || "20";
+        const sortBy = document.getElementById("filterSortBy").value;
+        const direction = document.getElementById("filterDirection").value;
+
+        document.getElementById("advancedSearchLoading").style.display =
+          "block";
+        document.getElementById("advancedSearchResponse").style.display =
+          "none";
+
+        try {
+          let url = `${API_URL}/requests?page=${page}&size=${size}&sort=${sortBy},${direction}`;
+
+          if (clientId) url += `&clientId=${clientId}`;
+          if (status) url += `&status=${status}`;
+          if (priority) url += `&priority=${priority}`;
+          if (type) url += `&type=${type}`;
+
+          if (createdFrom) {
+            const createdFromISO = new Date(createdFrom).toISOString();
+            url += `&createdFrom=${encodeURIComponent(createdFromISO)}`;
+          }
+
+          if (createdTo) {
+            const createdToISO = new Date(createdTo).toISOString();
+            url += `&createdTo=${encodeURIComponent(createdToISO)}`;
+          }
+
+          if (dueBefore) {
+            const dueBeforeISO = new Date(dueBefore).toISOString();
+            url += `&dueBefore=${encodeURIComponent(dueBeforeISO)}`;
+          }
+
+          const response = await fetch(url);
+          const data = await response.json();
+
+          if (response.ok) {
+            if (data.content && data.content.length > 0) {
+              renderRequestsList(data, "advancedSearchResponse");
+            } else {
+              document.getElementById("advancedSearchResponse").innerHTML =
+                '<div style="padding: 20px; text-align: center; color: #7f8c8d;">📭 Nenhuma requisição encontrada com esses critérios</div>';
+              document.getElementById("advancedSearchResponse").className =
+                "response";
+              document.getElementById("advancedSearchResponse").style.display =
+                "block";
+            }
+          } else {
+            showResponse("advancedSearchResponse", data, true);
+          }
+        } catch (error) {
+          showResponse(
+            "advancedSearchResponse",
+            { error: error.message },
+            true
+          );
+        } finally {
+          document.getElementById("advancedSearchLoading").style.display =
+            "none";
+        }
+      }
+
+      function renderRequestsList(data, containerId = "searchResponse") {
+        const container = document.getElementById(containerId);
 
         const statusMap = {
           NEW: "status-new",
@@ -598,7 +796,7 @@
           <div class="results-summary">
             <strong>📊 ${data.totalElements}</strong> requisição${
           data.totalElements !== 1 ? "ões" : ""
-        } encontrada${data.totalElements !== 1 ? "s" : ""} 
+        } encontrada${data.totalElements !== 1 ? "s" : ""}
             (Página ${data.number + 1} de ${data.totalPages})
           </div>
         `;
@@ -628,19 +826,19 @@
                   }">${req.priority}</span></div>
                 </div>
               </div>
-              
+
               ${
                 req.description
                   ? `<p style="color: #495057; margin: 8px 0; font-size: 14px;">${req.description}</p>`
                   : ""
               }
-              
+
               <div style="display: flex; gap: 12px; flex-wrap: wrap; margin-top: 12px; font-size: 13px; color: #6c757d;">
                 <div><span class="badge type">${req.type}</span></div>
                 <div>📅 Vencimento: <strong>${dueDate}</strong></div>
                 <div>🔄 Revisões: <strong>${req.revisionCount}</strong></div>
               </div>
-              
+
               <div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid #e9ecef; font-size: 12px; color: #adb5bd;">
                 Criado em ${createdDate}
               </div>
