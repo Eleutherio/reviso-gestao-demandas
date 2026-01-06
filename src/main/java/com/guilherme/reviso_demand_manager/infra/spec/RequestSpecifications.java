@@ -17,6 +17,10 @@ public final class RequestSpecifications {
         return (root, query, cb) -> clientId == null ? cb.conjunction() : cb.equal(root.get("clientId"), clientId);
     }
 
+    public static Specification<Request> companyId(UUID companyId) {
+        return (root, query, cb) -> companyId == null ? cb.conjunction() : cb.equal(root.get("companyId"), companyId);
+    }
+
     public static Specification<Request> status(RequestStatus status) {
         return (root, query, cb) -> status == null ? cb.conjunction() : cb.equal(root.get("status"), status);
     }
@@ -43,6 +47,7 @@ public final class RequestSpecifications {
 
     public static Specification<Request> build(
             UUID clientId,
+            UUID companyId,
             RequestStatus status,
             RequestType type,
             RequestPriority priority,
@@ -52,6 +57,7 @@ public final class RequestSpecifications {
     ) {
         return Specification
                 .where(clientId(clientId))
+                .and(companyId(companyId))
                 .and(status(status))
                 .and(type(type))
                 .and(priority(priority))

@@ -8,4 +8,5 @@ import java.util.UUID;
 
 public interface RequestEventRepository extends JpaRepository<RequestEvent, UUID> {
 	List<RequestEvent> findByRequestIdOrderByCreatedAtDesc(UUID requestId);
+	List<RequestEvent> findByRequestIdAndVisibleToClientTrueOrderByCreatedAtDesc(UUID requestId);
 }

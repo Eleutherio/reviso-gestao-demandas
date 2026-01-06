@@ -34,6 +34,7 @@ public class RequestService {
         Request request = new Request();
         request.setId(UUID.randomUUID());
         request.setClientId(dto.clientId());
+        request.setCompanyId(dto.companyId());
         request.setTitle(dto.title());
         request.setDescription(dto.description());
         request.setType(dto.type() != null ? dto.type() : RequestType.OTHER);
@@ -61,6 +62,7 @@ public class RequestService {
             RequestPriority priority,
             RequestType type,
             UUID clientId,
+            UUID companyId,
             OffsetDateTime dueBefore,
             OffsetDateTime createdFrom,
             OffsetDateTime createdTo,
@@ -73,7 +75,7 @@ public class RequestService {
         Pageable pageable = PageRequest.of(page, size, Sort.by(sortDirection, sortBy));
 
         Specification<Request> spec = RequestSpecifications.build(
-                clientId, status, type, priority, dueBefore, createdFrom, createdTo
+            clientId, companyId, status, type, priority, dueBefore, createdFrom, createdTo
         );
 
         return requestRepository.findAll(spec, pageable).map(this::toDTO);
@@ -83,6 +85,7 @@ public class RequestService {
         return new RequestDTO(
                 request.getId(),
                 request.getClientId(),
+                request.getCompanyId(),
                 request.getTitle(),
                 request.getDescription(),
                 request.getType(),

@@ -27,6 +27,9 @@ public class Request {
     
     @Column(name = "client_id", nullable = false, columnDefinition = "UUID")
     private UUID clientId;
+
+    @Column(name = "company_id", columnDefinition = "UUID")
+    private UUID companyId;
     
     @Column(nullable = false)
     private String title;
@@ -67,12 +70,13 @@ public class Request {
     public Request() {
     }
 
-    public Request(UUID id, UUID clientId, String title, String description, 
+    public Request(UUID id, UUID clientId, UUID companyId, String title, String description,
                    RequestType type, RequestPriority priority, RequestStatus status,
-                   OffsetDateTime dueDate, Integer revisionCount, 
+                   OffsetDateTime dueDate, Integer revisionCount,
                    OffsetDateTime createdAt, OffsetDateTime updatedAt) {
         this.id = id;
         this.clientId = clientId;
+        this.companyId = companyId;
         this.title = title;
         this.description = description;
         this.type = type;
@@ -98,6 +102,14 @@ public class Request {
 
     public void setClientId(UUID clientId) {
         this.clientId = clientId;
+    }
+
+    public UUID getCompanyId() {
+        return companyId;
+    }
+
+    public void setCompanyId(UUID companyId) {
+        this.companyId = companyId;
     }
 
     public String getTitle() {

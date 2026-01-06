@@ -52,6 +52,7 @@ public class RequestController {
             @RequestParam(required = false) RequestPriority priority,
             @RequestParam(required = false) RequestType type,
             @RequestParam(required = false) UUID clientId,
+            @RequestParam(required = false) UUID companyId,
             @RequestParam(required = false) OffsetDateTime dueBefore,
             @RequestParam(required = false) OffsetDateTime createdFrom,
             @RequestParam(required = false) OffsetDateTime createdTo,
@@ -61,7 +62,7 @@ public class RequestController {
             @RequestParam(defaultValue = "desc") String direction) {
 
         Page<RequestDTO> requests = requestService.getAllRequests(
-                status, priority, type, clientId, 
+            status, priority, type, clientId, companyId,
                 dueBefore, createdFrom, createdTo,
                 page, size, sortBy, direction
         );
@@ -76,7 +77,7 @@ public class RequestController {
 
     @PostMapping("/{id}/comments")
     public ResponseEntity<RequestEventDTO> addComment(@PathVariable UUID id, @Valid @RequestBody CommentDTO dto) {
-        RequestEvent event = requestWorkflowService.addComment(id, dto.message(), dto.actorId());
+        RequestEvent event = requestWorkflowService.addComment(id, dto.message(), dto.actorId(), dto.visibleToClient());
         return ResponseEntity.ok(toEventDTO(event));
     }
 
@@ -93,8 +94,9 @@ public class RequestController {
     }
 
     @GetMapping("/{id}/events")
-    public ResponseEntity<List<RequestEventDTO>> listEvents(@PathVariable UUID id) {
-        List<RequestEventDTO> events = requestWorkflowService.listEvents(id).stream()
+    public ResponseEntity<List<RequestEventDTO>> listEvents(@PathVariable UUID id,
+                                                           @RequestParam(defaultValue = "false") boolean onlyVisibleToClient) {
+        List<RequestEventDTO> events = requestWorkflowService.listEvents(id, onlyVisibleToClient).stream()
                 .map(this::toEventDTO)
                 .collect(Collectors.toList());
         return ResponseEntity.ok(events);
@@ -109,6 +111,7 @@ public class RequestController {
                 event.getFromStatus(),
                 event.getToStatus(),
                 event.getMessage(),
+                event.getVisibleToClient(),
                 event.getRevisionNumber(),
                 event.getCreatedAt()
         );

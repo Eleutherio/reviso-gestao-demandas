@@ -30,6 +30,7 @@ public class RequestWorkflowService {
                                     RequestEventType eventType,
                                     RequestStatus toStatus,
                                     String message,
+                                    Boolean visibleToClient,
                                     UUID actorId) {
         if (eventType == null) {
             throw new IllegalArgumentException("eventType is required");
@@ -62,6 +63,7 @@ public class RequestWorkflowService {
         event.setFromStatus(fromStatus);
         event.setToStatus(toStatus);
         event.setMessage(message);
+        event.setVisibleToClient(visibleToClient != null ? visibleToClient : true);
         event.setRevisionNumber(request.getRevisionCount());
         event.setCreatedAt(OffsetDateTime.now());
 
@@ -70,15 +72,15 @@ public class RequestWorkflowService {
 
     @Transactional
     public RequestEvent changeStatus(UUID requestId, RequestStatus toStatus, String message, UUID actorId) {
-        return appendEvent(requestId, RequestEventType.STATUS_CHANGED, toStatus, message, actorId);
+        return appendEvent(requestId, RequestEventType.STATUS_CHANGED, toStatus, message, true, actorId);
     }
 
     @Transactional
-    public RequestEvent addComment(UUID requestId, String message, UUID actorId) {
+    public RequestEvent addComment(UUID requestId, String message, UUID actorId, Boolean visibleToClient) {
         if (message == null || message.isBlank()) {
             throw new IllegalArgumentException("comment message is required");
         }
-        return appendEvent(requestId, RequestEventType.COMMENT_ADDED, null, message, actorId);
+        return appendEvent(requestId, RequestEventType.COMMENT_ADDED, null, message, visibleToClient, actorId);
     }
 
     @Transactional
@@ -98,6 +100,7 @@ public class RequestWorkflowService {
         event.setFromStatus(request.getStatus());
         event.setToStatus(request.getStatus());
         event.setMessage(message);
+        event.setVisibleToClient(true);
         event.setRevisionNumber(request.getRevisionCount());
         event.setCreatedAt(OffsetDateTime.now());
 
@@ -119,6 +122,7 @@ public class RequestWorkflowService {
         event.setEventType(RequestEventType.ASSIGNED);
         event.setFromStatus(request.getStatus());
         event.setToStatus(request.getStatus());
+        event.setVisibleToClient(false);
         event.setRevisionNumber(request.getRevisionCount());
         event.setCreatedAt(OffsetDateTime.now());
 
@@ -126,10 +130,14 @@ public class RequestWorkflowService {
     }
 
     @Transactional(readOnly = true)
-    public List<RequestEvent> listEvents(UUID requestId) {
+    public List<RequestEvent> listEvents(UUID requestId, boolean onlyVisibleToClient) {
         if (!requestRepository.existsById(requestId)) {
             throw new ResourceNotFoundException("Request not found");
         }
-        return requestEventRepository.findByRequestIdOrderByCreatedAtDesc(requestId);
+        if (onlyVisibleToClient) {
+            return requestEventRepository.findByRequestIdAndVisibleToClientTrueOrderByCreatedAtDesc(requestId);
+        } else {
+            return requestEventRepository.findByRequestIdOrderByCreatedAtDesc(requestId);
+        }
     }
 }

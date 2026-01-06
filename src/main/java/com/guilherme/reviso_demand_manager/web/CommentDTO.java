@@ -7,6 +7,7 @@ import java.util.UUID;
 public record CommentDTO(
         @NotBlank(message = "Mensagem é obrigatória")
         String message,
-        UUID actorId
+        UUID actorId,
+        Boolean visibleToClient
 ) {
 }

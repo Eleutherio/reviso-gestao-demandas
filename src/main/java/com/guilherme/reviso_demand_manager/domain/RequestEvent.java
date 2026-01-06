@@ -27,6 +27,9 @@ public class RequestEvent {
     @Column(name = "event_type", nullable = false, columnDefinition = "request_event_type")
     private RequestEventType eventType;
 
+    @Column(name = "visible_to_client", nullable = false)
+    private Boolean visibleToClient;
+
     @Enumerated(EnumType.STRING)
     @JdbcTypeCode(SqlTypes.NAMED_ENUM)
     @Column(name = "from_status", columnDefinition = "request_status")
@@ -103,6 +106,14 @@ public class RequestEvent {
 
     public void setMessage(String message) {
         this.message = message;
+    }
+
+    public Boolean getVisibleToClient() {
+        return visibleToClient;
+    }
+
+    public void setVisibleToClient(Boolean visibleToClient) {
+        this.visibleToClient = visibleToClient;
     }
 
     public Integer getRevisionNumber() {

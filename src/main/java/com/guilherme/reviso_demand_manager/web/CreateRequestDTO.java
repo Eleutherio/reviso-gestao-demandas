@@ -11,6 +11,8 @@ import java.util.UUID;
 public record CreateRequestDTO(
     @NotNull(message = "Client ID is required")
     UUID clientId,
+
+    UUID companyId,
     
     @NotBlank(message = "Title is required")
     String title,

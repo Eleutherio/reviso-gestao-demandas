@@ -14,6 +14,7 @@ public record RequestEventDTO(
         RequestStatus fromStatus,
         RequestStatus toStatus,
         String message,
+        Boolean visibleToClient,
         Integer revisionNumber,
         OffsetDateTime createdAt
 ) {
