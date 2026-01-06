@@ -4,6 +4,8 @@ import com.guilherme.reviso_demand_manager.domain.Company;
 import com.guilherme.reviso_demand_manager.infra.CompanyRepository;
 import com.guilherme.reviso_demand_manager.web.CompanyDTO;
 import com.guilherme.reviso_demand_manager.web.CreateCompanyDTO;
+import com.guilherme.reviso_demand_manager.web.ResourceNotFoundException;
+import com.guilherme.reviso_demand_manager.web.UpdateCompanyDTO;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -42,6 +44,44 @@ public class CompanyService {
         return companyRepository.findAll().stream()
                 .map(this::toDTO)
                 .toList();
+    }
+
+    @Transactional
+    public CompanyDTO updateCompany(UUID companyId, UpdateCompanyDTO dto) {
+        Company company = companyRepository.findById(companyId)
+                .orElseThrow(() -> new ResourceNotFoundException("Empresa não encontrada"));
+
+        if (dto.name() != null) {
+            company.setName(blankToNull(dto.name()));
+        }
+        if (dto.type() != null) {
+            company.setType(dto.type());
+        }
+        if (dto.active() != null) {
+            company.setActive(dto.active());
+        }
+
+        if (dto.segment() != null) {
+            company.setSegment(blankToNull(dto.segment()));
+        }
+        if (dto.contactEmail() != null) {
+            company.setContactEmail(blankToNull(dto.contactEmail()));
+        }
+        if (dto.site() != null) {
+            company.setSite(blankToNull(dto.site()));
+        }
+        if (dto.usefulLinks() != null) {
+            company.setUsefulLinks(dto.usefulLinks());
+        }
+
+        Company saved = companyRepository.save(company);
+        return toDTO(saved);
+    }
+
+    private String blankToNull(String value) {
+        if (value == null) return null;
+        String trimmed = value.trim();
+        return trimmed.isEmpty() ? null : trimmed;
     }
 
     private CompanyDTO toDTO(Company company) {

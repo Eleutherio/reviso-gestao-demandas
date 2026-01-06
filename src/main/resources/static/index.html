@@ -94,6 +94,18 @@
       <ul class="nav nav-pills mb-3" id="mainTabs" role="tablist">
         <li class="nav-item" role="presentation">
           <button
+            class="nav-link"
+            id="tab-empresas"
+            data-bs-toggle="pill"
+            data-bs-target="#pane-empresas"
+            type="button"
+            role="tab"
+          >
+            Empresas
+          </button>
+        </li>
+        <li class="nav-item" role="presentation">
+          <button
             class="nav-link active"
             id="tab-cliente"
             data-bs-toggle="pill"
@@ -167,6 +179,11 @@
       </ul>
 
       <div class="tab-content" id="tabContent">
+        <div class="tab-pane fade" id="pane-empresas" role="tabpanel">
+          <div id="pane-empresas-content" class="p-2">
+            <div class="skeleton rounded" style="height: 80px"></div>
+          </div>
+        </div>
         <div
           class="tab-pane fade show active"
           id="pane-clientes"
@@ -941,6 +958,7 @@
 
       // Lazy-load de conteúdo das abas
       const paneUrls = {
+        empresas: "/tabs/empresas.html",
         clientes: "/tabs/clientes.html",
         cadastrar: "/tabs/cadastrar.html",
         consultar: "/tabs/consultar.html",
@@ -971,6 +989,7 @@
 
       // Carregar aba quando ficar visível
       const tabKeyMap = {
+        "tab-empresas": "empresas",
         "tab-cliente": "clientes",
         "tab-cadastrar": "cadastrar",
         "tab-consultar": "consultar",
@@ -989,6 +1008,12 @@
 
       function init() {
         // Carregar conteúdo necessário antes de usar funções
+        if (userRole === "AGENCY_ADMIN") {
+          ensurePaneLoaded("empresas", () => {
+            resetCompanyFormAdmin();
+            loadCompaniesAdmin();
+          });
+        }
         ensurePaneLoaded("clientes", listClients);
         ensurePaneLoaded("consultar", () => {
           clearFilters();
@@ -1016,6 +1041,7 @@
 
       function applyRoleVisibility() {
         const tabIds = {
+          empresas: "tab-empresas",
           clientes: "tab-cliente",
           cadastrar: "tab-cadastrar",
           consultar: "tab-consultar",
@@ -1026,6 +1052,7 @@
 
         const roleVisibility = {
           AGENCY_ADMIN: [
+            "empresas",
             "clientes",
             "cadastrar",
             "consultar",
@@ -1058,6 +1085,196 @@
             if (firstAllowed) new bootstrap.Tab(firstAllowed).show();
           }
         });
+      }
+
+      function resetCompanyFormAdmin() {
+        const idEl = document.getElementById("companyFormId");
+        const nameEl = document.getElementById("companyName");
+        const typeEl = document.getElementById("companyType");
+        const segmentEl = document.getElementById("companySegment");
+        const emailEl = document.getElementById("companyContactEmail");
+        const siteEl = document.getElementById("companySite");
+        const linksEl = document.getElementById("companyUsefulLinks");
+        const activeEl = document.getElementById("companyActive");
+
+        if (!idEl) return;
+        idEl.value = "";
+        nameEl.value = "";
+        typeEl.value = "CLIENT";
+        segmentEl.value = "";
+        emailEl.value = "";
+        siteEl.value = "";
+        linksEl.value = "";
+        activeEl.checked = true;
+      }
+
+      function parseUsefulLinksTextarea(value) {
+        if (value == null) return null;
+        const trimmed = value.trim();
+        if (!trimmed) return [];
+        return trimmed
+          .split("\n")
+          .map((s) => s.trim())
+          .filter((s) => s.length > 0);
+      }
+
+      function renderCompaniesAdmin(companies) {
+        const container = document.getElementById("companiesList");
+        if (!container) return;
+        if (!companies || companies.length === 0) {
+          container.innerHTML = '<p class="text-muted">Nenhuma empresa</p>';
+          return;
+        }
+
+        let html =
+          '<table class="table table-sm align-middle"><thead><tr><th>Nome</th><th>Tipo</th><th>Ativa</th><th>Email</th><th>Site</th><th>ID</th><th></th></tr></thead><tbody>';
+        companies.forEach((c) => {
+          const email = c.contactEmail || "-";
+          const site = c.site || "-";
+          html += `<tr>
+            <td>${c.name}</td>
+            <td><span class="badge text-bg-light">${c.type}</span></td>
+            <td>${c.active ? "Sim" : "Não"}</td>
+            <td>${email}</td>
+            <td>${site}</td>
+            <td><code>${c.id}</code></td>
+            <td class="text-end">
+              <div class="btn-group btn-group-sm">
+                <button class="btn btn-outline-secondary" onclick="copyText('${
+                  c.id
+                }')">Copiar ID</button>
+                <button class="btn btn-outline-primary" onclick='editCompanyAdmin(${JSON.stringify(
+                  c
+                ).replace(/'/g, "&#39;")})'>Editar</button>
+              </div>
+            </td>
+          </tr>`;
+        });
+        html += "</tbody></table>";
+        container.innerHTML = html;
+      }
+
+      async function loadCompaniesAdmin() {
+        const container = document.getElementById("companiesList");
+        if (container)
+          container.innerHTML =
+            '<div class="skeleton rounded" style="height:80px;"></div>';
+        try {
+          const res = await fetch(`${API_URL}/admin/companies`);
+          const data = await res.json();
+          if (!res.ok) {
+            throw new Error(
+              data.message || data.error || "Erro ao listar empresas"
+            );
+          }
+          renderCompaniesAdmin(data);
+        } catch (e) {
+          if (container)
+            container.innerHTML = `<div class="alert alert-danger">${e.message}</div>`;
+          showToast(e.message, "danger");
+        }
+      }
+
+      function editCompanyAdmin(company) {
+        ensurePaneLoaded("empresas", () => {
+          const idEl = document.getElementById("companyFormId");
+          if (!idEl) return;
+          idEl.value = company.id || "";
+          document.getElementById("companyName").value = company.name || "";
+          document.getElementById("companyType").value =
+            company.type || "CLIENT";
+          document.getElementById("companySegment").value =
+            company.segment || "";
+          document.getElementById("companyContactEmail").value =
+            company.contactEmail || "";
+          document.getElementById("companySite").value = company.site || "";
+          document.getElementById("companyActive").checked =
+            company.active !== false;
+          const links = Array.isArray(company.usefulLinks)
+            ? company.usefulLinks
+            : [];
+          document.getElementById("companyUsefulLinks").value =
+            links.join("\n");
+
+          const tab = new bootstrap.Tab(
+            document.getElementById("tab-empresas")
+          );
+          tab.show();
+        });
+      }
+
+      async function saveCompanyAdmin() {
+        const idEl = document.getElementById("companyFormId");
+        if (!idEl) return;
+
+        const id = idEl.value.trim();
+        const name = document.getElementById("companyName").value;
+        const type = document.getElementById("companyType").value;
+        const segment = document.getElementById("companySegment").value;
+        const contactEmail = document.getElementById(
+          "companyContactEmail"
+        ).value;
+        const site = document.getElementById("companySite").value;
+        const usefulLinks = parseUsefulLinksTextarea(
+          document.getElementById("companyUsefulLinks").value
+        );
+        const active = document.getElementById("companyActive").checked;
+
+        try {
+          if (!name || !type) {
+            return showToast("Nome e tipo são obrigatórios", "danger");
+          }
+
+          if (!id) {
+            const res = await fetch(`${API_URL}/admin/companies`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                name,
+                type,
+                segment: segment || null,
+                contactEmail: contactEmail || null,
+                site: site || null,
+                usefulLinks: usefulLinks,
+              }),
+            });
+            const data = await res.json();
+            if (!res.ok) {
+              throw new Error(
+                data.message || data.error || "Erro ao criar empresa"
+              );
+            }
+            showToast("Empresa criada", "success");
+            idEl.value = data.id;
+            loadCompaniesAdmin();
+            return;
+          }
+
+          const res = await fetch(`${API_URL}/admin/companies/${id}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              name,
+              type,
+              active,
+              segment: segment || "",
+              contactEmail: contactEmail || "",
+              site: site || "",
+              usefulLinks: usefulLinks,
+            }),
+          });
+          const data = await res.json();
+          if (!res.ok) {
+            throw new Error(
+              data.message || data.error || "Erro ao atualizar empresa"
+            );
+          }
+
+          showToast("Empresa atualizada", "success");
+          loadCompaniesAdmin();
+        } catch (e) {
+          showToast(e.message, "danger");
+        }
       }
 
       applyRoleVisibility();

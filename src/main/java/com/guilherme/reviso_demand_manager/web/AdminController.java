@@ -8,6 +8,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/admin")
@@ -30,6 +31,12 @@ public class AdminController {
     @GetMapping("/companies")
     public ResponseEntity<List<CompanyDTO>> listCompanies() {
         return ResponseEntity.ok(companyService.listAllCompanies());
+    }
+
+    @PatchMapping("/companies/{id}")
+    public ResponseEntity<CompanyDTO> updateCompany(@PathVariable UUID id, @RequestBody UpdateCompanyDTO dto) {
+        CompanyDTO updated = companyService.updateCompany(id, dto);
+        return ResponseEntity.ok(updated);
     }
 
     @PostMapping("/users")
