@@ -13,10 +13,6 @@ public final class RequestSpecifications {
 
     private RequestSpecifications() {}
 
-    public static Specification<Request> clientId(UUID clientId) {
-        return (root, query, cb) -> clientId == null ? cb.conjunction() : cb.equal(root.get("clientId"), clientId);
-    }
-
     public static Specification<Request> companyId(UUID companyId) {
         return (root, query, cb) -> companyId == null ? cb.conjunction() : cb.equal(root.get("companyId"), companyId);
     }
@@ -46,7 +42,6 @@ public final class RequestSpecifications {
     }
 
     public static Specification<Request> build(
-            UUID clientId,
             UUID companyId,
             RequestStatus status,
             RequestType type,
@@ -56,8 +51,7 @@ public final class RequestSpecifications {
             OffsetDateTime createdTo
     ) {
         return Specification
-                .where(clientId(clientId))
-                .and(companyId(companyId))
+            .where(companyId(companyId))
                 .and(status(status))
                 .and(type(type))
                 .and(priority(priority))

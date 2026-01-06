@@ -4,6 +4,8 @@ import com.guilherme.reviso_demand_manager.domain.Request;
 import com.guilherme.reviso_demand_manager.domain.RequestStatus;
 import com.guilherme.reviso_demand_manager.domain.RequestType;
 import com.guilherme.reviso_demand_manager.domain.RequestPriority;
+import com.guilherme.reviso_demand_manager.domain.Company;
+import com.guilherme.reviso_demand_manager.infra.CompanyRepository;
 import com.guilherme.reviso_demand_manager.infra.RequestRepository;
 import com.guilherme.reviso_demand_manager.infra.spec.RequestSpecifications;
 import com.guilherme.reviso_demand_manager.web.CreateRequestDTO;
@@ -24,16 +26,17 @@ import java.util.UUID;
 public class RequestService {
 
     private final RequestRepository requestRepository;
+    private final CompanyRepository companyRepository;
 
-    public RequestService(RequestRepository requestRepository) {
+    public RequestService(RequestRepository requestRepository, CompanyRepository companyRepository) {
         this.requestRepository = requestRepository;
+        this.companyRepository = companyRepository;
     }
 
     @Transactional
     public RequestDTO createRequest(CreateRequestDTO dto) {
         Request request = new Request();
         request.setId(UUID.randomUUID());
-        request.setClientId(dto.clientId());
         request.setCompanyId(dto.companyId());
         request.setBriefingId(dto.briefingId());
         request.setTitle(dto.title());
@@ -62,7 +65,6 @@ public class RequestService {
             RequestStatus status,
             RequestPriority priority,
             RequestType type,
-            UUID clientId,
             UUID companyId,
             OffsetDateTime dueBefore,
             OffsetDateTime createdFrom,
@@ -76,7 +78,7 @@ public class RequestService {
         Pageable pageable = PageRequest.of(page, size, Sort.by(sortDirection, sortBy));
 
         Specification<Request> spec = RequestSpecifications.build(
-            clientId, companyId, status, type, priority, dueBefore, createdFrom, createdTo
+            companyId, status, type, priority, dueBefore, createdFrom, createdTo
         );
 
         return requestRepository.findAll(spec, pageable).map(this::toDTO);
@@ -85,8 +87,8 @@ public class RequestService {
     private RequestDTO toDTO(Request request) {
         return new RequestDTO(
                 request.getId(),
-                request.getClientId(),
                 request.getCompanyId(),
+                resolveCompanyName(request.getCompanyId()),
                 request.getBriefingId(),
                 request.getTitle(),
                 request.getDescription(),
@@ -99,5 +101,12 @@ public class RequestService {
                 request.getCreatedAt(),
                 request.getUpdatedAt()
         );
+    }
+
+    private String resolveCompanyName(UUID companyId) {
+        if (companyId == null) return null;
+        return companyRepository.findById(companyId)
+                .map(Company::getName)
+                .orElse(null);
     }
 }

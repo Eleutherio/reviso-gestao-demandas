@@ -1,6 +1,7 @@
 package com.guilherme.reviso_demand_manager.web;
 
 import com.guilherme.reviso_demand_manager.application.BriefingService;
+import com.guilherme.reviso_demand_manager.application.CompanyService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -12,9 +13,16 @@ import java.util.UUID;
 public class AgencyController {
 
     private final BriefingService briefingService;
+    private final CompanyService companyService;
 
-    public AgencyController(BriefingService briefingService) {
+    public AgencyController(BriefingService briefingService, CompanyService companyService) {
         this.briefingService = briefingService;
+        this.companyService = companyService;
+    }
+
+    @GetMapping("/companies")
+    public ResponseEntity<List<CompanyDTO>> listClientCompanies() {
+        return ResponseEntity.ok(companyService.listClientCompanies());
     }
 
     @GetMapping("/briefings")

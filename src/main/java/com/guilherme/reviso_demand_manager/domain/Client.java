@@ -1,26 +1,17 @@
 package com.guilherme.reviso_demand_manager.domain;
 
-import jakarta.persistence.*;
 import java.time.OffsetDateTime;
 import java.util.UUID;
-
-@Entity
-@Table(name = "clients")
 public class Client {
 
-    @Id
-    @Column(columnDefinition = "UUID")
     private UUID id;
     
-    @Column(nullable = false)
     private String name;
     
     private String segment;
     
-    @Column(nullable = false)
     private Boolean active;
     
-    @Column(name = "created_at", nullable = false)
     private OffsetDateTime createdAt;
 
     public Client() {

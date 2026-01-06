@@ -9,8 +9,8 @@ import java.util.UUID;
 
 public record RequestDTO(
     UUID id,
-    UUID clientId,
     UUID companyId,
+    String companyName,
     UUID briefingId,
     String title,
     String description,

@@ -1,6 +1,7 @@
 package com.guilherme.reviso_demand_manager.application;
 
 import com.guilherme.reviso_demand_manager.domain.Company;
+import com.guilherme.reviso_demand_manager.domain.CompanyType;
 import com.guilherme.reviso_demand_manager.infra.CompanyRepository;
 import com.guilherme.reviso_demand_manager.web.CompanyDTO;
 import com.guilherme.reviso_demand_manager.web.CreateCompanyDTO;
@@ -42,6 +43,14 @@ public class CompanyService {
     @Transactional(readOnly = true)
     public List<CompanyDTO> listAllCompanies() {
         return companyRepository.findAll().stream()
+                .map(this::toDTO)
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<CompanyDTO> listClientCompanies() {
+        return companyRepository.findByTypeOrderByNameAsc(CompanyType.CLIENT)
+                .stream()
                 .map(this::toDTO)
                 .toList();
     }

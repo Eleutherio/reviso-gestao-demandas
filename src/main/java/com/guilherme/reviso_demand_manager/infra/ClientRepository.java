@@ -1,11 +1,8 @@
 package com.guilherme.reviso_demand_manager.infra;
 
-import com.guilherme.reviso_demand_manager.domain.Client;
-import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.stereotype.Repository;
-
-import java.util.UUID;
-
-@Repository
-public interface ClientRepository extends JpaRepository<Client, UUID> {
+/**
+ * Legado: Client foi substituído por Company (type=CLIENT).
+ * Esta interface permanece apenas para compatibilidade de compilação e não é um Spring Data repository.
+ */
+public interface ClientRepository {
 }

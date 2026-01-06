@@ -24,11 +24,8 @@ public class Request {
     @Id
     @Column(columnDefinition = "UUID")
     private UUID id;
-    
-    @Column(name = "client_id", nullable = false, columnDefinition = "UUID")
-    private UUID clientId;
 
-    @Column(name = "company_id", columnDefinition = "UUID")
+    @Column(name = "company_id", nullable = false, columnDefinition = "UUID")
     private UUID companyId;
 
     @Column(name = "briefing_id", columnDefinition = "UUID")
@@ -73,12 +70,11 @@ public class Request {
     public Request() {
     }
 
-    public Request(UUID id, UUID clientId, UUID companyId, String title, String description,
+    public Request(UUID id, UUID companyId, String title, String description,
                    RequestType type, RequestPriority priority, RequestStatus status,
                    OffsetDateTime dueDate, Integer revisionCount,
                    OffsetDateTime createdAt, OffsetDateTime updatedAt) {
         this.id = id;
-        this.clientId = clientId;
         this.companyId = companyId;
         this.title = title;
         this.description = description;
@@ -97,14 +93,6 @@ public class Request {
 
     public void setId(UUID id) {
         this.id = id;
-    }
-
-    public UUID getClientId() {
-        return clientId;
-    }
-
-    public void setClientId(UUID clientId) {
-        this.clientId = clientId;
     }
 
     public UUID getCompanyId() {

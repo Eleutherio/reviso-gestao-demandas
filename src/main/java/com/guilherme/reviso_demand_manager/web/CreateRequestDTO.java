@@ -9,9 +9,7 @@ import java.time.OffsetDateTime;
 import java.util.UUID;
 
 public record CreateRequestDTO(
-    @NotNull(message = "Client ID is required")
-    UUID clientId,
-
+    @NotNull(message = "Company ID is required")
     UUID companyId,
 
     UUID briefingId,

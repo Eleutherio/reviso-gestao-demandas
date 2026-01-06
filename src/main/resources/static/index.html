@@ -94,7 +94,7 @@
       <ul class="nav nav-pills mb-3" id="mainTabs" role="tablist">
         <li class="nav-item" role="presentation">
           <button
-            class="nav-link"
+            class="nav-link active"
             id="tab-empresas"
             data-bs-toggle="pill"
             data-bs-target="#pane-empresas"
@@ -106,18 +106,6 @@
         </li>
         <li class="nav-item" role="presentation">
           <button
-            class="nav-link active"
-            id="tab-cliente"
-            data-bs-toggle="pill"
-            data-bs-target="#pane-clientes"
-            type="button"
-            role="tab"
-          >
-            Clientes
-          </button>
-        </li>
-        <li class="nav-item" role="presentation">
-          <button
             class="nav-link"
             id="tab-cadastrar"
             data-bs-toggle="pill"
@@ -125,7 +113,7 @@
             type="button"
             role="tab"
           >
-            Cadastrar Requisição de Cliente
+            Cadastrar Requisição de Empresa
           </button>
         </li>
         <li class="nav-item" role="presentation">
@@ -179,17 +167,12 @@
       </ul>
 
       <div class="tab-content" id="tabContent">
-        <div class="tab-pane fade" id="pane-empresas" role="tabpanel">
-          <div id="pane-empresas-content" class="p-2">
-            <div class="skeleton rounded" style="height: 80px"></div>
-          </div>
-        </div>
         <div
           class="tab-pane fade show active"
-          id="pane-clientes"
+          id="pane-empresas"
           role="tabpanel"
         >
-          <div id="pane-clientes-content" class="p-2">
+          <div id="pane-empresas-content" class="p-2">
             <div class="skeleton rounded" style="height: 80px"></div>
           </div>
         </div>
@@ -278,67 +261,9 @@
         el.style.display = show ? "inline-block" : "none";
       }
 
-      function renderClients(clients) {
-        const container = document.getElementById("clientList");
-        if (!clients || clients.length === 0) {
-          container.innerHTML = '<p class="text-muted">Nenhum cliente</p>';
-          return;
-        }
-        let html =
-          '<table class="table table-sm align-middle"><thead><tr><th>Nome</th><th>Segmento</th><th>ID</th><th></th></tr></thead><tbody>';
-        clients.forEach((c) => {
-          html += `<tr><td>${c.name}</td><td>${
-            c.segment || "-"
-          }</td><td><code>${
-            c.id
-          }</code></td><td><button class="btn btn-outline-secondary btn-sm" onclick="copyText('${
-            c.id
-          }')">Copiar ID</button></td></tr>`;
-        });
-        html += "</tbody></table>";
-        container.innerHTML = html;
-      }
-
-      async function createClient() {
-        const name = document.getElementById("clientName").value;
-        const segment = document.getElementById("clientSegment").value;
-        if (!name) return showToast("Nome é obrigatório", "danger");
-        try {
-          const res = await fetch(`${API_URL}/clients`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ name, segment }),
-          });
-          const data = await res.json();
-          if (res.ok) {
-            showToast("Cliente criado", "success");
-            document.getElementById("clientName").value = "";
-            document.getElementById("clientSegment").value = "";
-            listClients();
-          } else {
-            showToast(data.message || "Erro ao criar", "danger");
-          }
-        } catch (e) {
-          showToast(e.message, "danger");
-        }
-      }
-
-      async function listClients() {
-        const container = document.getElementById("clientList");
-        container.innerHTML =
-          '<div class="skeleton rounded" style="height:80px;"></div>';
-        try {
-          const res = await fetch(`${API_URL}/clients`);
-          const data = await res.json();
-          renderClients(data);
-        } catch (e) {
-          showToast(e.message, "danger");
-        }
-      }
-
       function clearFilters() {
         [
-          "filterClientId",
+          "filterCompanyId",
           "filterStatus",
           "filterPriority",
           "filterType",
@@ -355,10 +280,10 @@
       }
 
       async function createRequest() {
-        const clientId = document.getElementById("requestClientId").value;
+        const companyId = document.getElementById("requestCompanyId").value;
         const title = document.getElementById("requestTitle").value;
-        if (!clientId || !title)
-          return showToast("Cliente e título são obrigatórios", "danger");
+        if (!companyId || !title)
+          return showToast("Empresa e título são obrigatórios", "danger");
         const description = document.getElementById("requestDescription").value;
         const type = document.getElementById("requestType").value || null;
         const priority =
@@ -367,7 +292,7 @@
         let dueDateISO;
         if (dueDate) dueDateISO = new Date(dueDate).toISOString();
         const body = {
-          clientId,
+          companyId,
           title,
           description: description || undefined,
           type: type || undefined,
@@ -383,7 +308,7 @@
           const data = await res.json();
           if (res.ok) {
             showToast("Requisição criada", "success");
-            document.getElementById("requestClientId").value = "";
+            document.getElementById("requestCompanyId").value = "";
             document.getElementById("requestTitle").value = "";
             document.getElementById("requestDescription").value = "";
             document.getElementById("requestType").value = "";
@@ -403,7 +328,7 @@
         const status = document.getElementById("filterStatus").value;
         const priority = document.getElementById("filterPriority").value;
         const type = document.getElementById("filterType").value;
-        const clientId = document.getElementById("filterClientId").value;
+        const companyId = document.getElementById("filterCompanyId").value;
         const createdFrom = document.getElementById("filterCreatedFrom").value;
         const createdTo = document.getElementById("filterCreatedTo").value;
         const dueBefore = document.getElementById("filterDueBefore").value;
@@ -415,7 +340,7 @@
         list.innerHTML =
           '<div class="skeleton rounded" style="height:120px;"></div>';
         let url = `${API_URL}/requests?page=${page}&size=${size}&sort=${sortBy},${direction}`;
-        if (clientId) url += `&clientId=${clientId}`;
+        if (companyId) url += `&companyId=${companyId}`;
         if (status) url += `&status=${status}`;
         if (priority) url += `&priority=${priority}`;
         if (type) url += `&type=${type}`;
@@ -472,7 +397,7 @@
             <div class="text-muted small">ID ${req.id.substring(
               0,
               8
-            )}... · Cliente ${req.clientId.substring(
+            )}... · Empresa ${req.companyId.substring(
               0,
               8
             )}... · Criado ${created}</div>
@@ -501,7 +426,7 @@
         document.getElementById("detailId").innerHTML = `${req.id}`;
         document.getElementById("detailDescription").textContent =
           req.description || "Sem descrição";
-        document.getElementById("detailClient").textContent = req.clientId;
+        document.getElementById("detailClient").textContent = req.companyId;
         const due = req.dueDate
           ? new Date(req.dueDate).toLocaleString("pt-BR")
           : "Não definido";
@@ -959,7 +884,6 @@
       // Lazy-load de conteúdo das abas
       const paneUrls = {
         empresas: "/tabs/empresas.html",
-        clientes: "/tabs/clientes.html",
         cadastrar: "/tabs/cadastrar.html",
         consultar: "/tabs/consultar.html",
         workflow: "/tabs/workflow.html",
@@ -990,7 +914,6 @@
       // Carregar aba quando ficar visível
       const tabKeyMap = {
         "tab-empresas": "empresas",
-        "tab-cliente": "clientes",
         "tab-cadastrar": "cadastrar",
         "tab-consultar": "consultar",
         "tab-workflow": "workflow",
@@ -1008,13 +931,15 @@
 
       function init() {
         // Carregar conteúdo necessário antes de usar funções
-        if (userRole === "AGENCY_ADMIN") {
+        if (userRole === "AGENCY_ADMIN" || userRole === "AGENCY_USER") {
           ensurePaneLoaded("empresas", () => {
-            resetCompanyFormAdmin();
-            loadCompaniesAdmin();
+            configureEmpresasPane();
+            if (userRole === "AGENCY_ADMIN") {
+              resetCompanyFormAdmin();
+            }
+            loadCompanies();
           });
         }
-        ensurePaneLoaded("clientes", listClients);
         ensurePaneLoaded("consultar", () => {
           clearFilters();
           advancedSearch();
@@ -1042,7 +967,6 @@
       function applyRoleVisibility() {
         const tabIds = {
           empresas: "tab-empresas",
-          clientes: "tab-cliente",
           cadastrar: "tab-cadastrar",
           consultar: "tab-consultar",
           workflow: "tab-workflow",
@@ -1053,7 +977,6 @@
         const roleVisibility = {
           AGENCY_ADMIN: [
             "empresas",
-            "clientes",
             "cadastrar",
             "consultar",
             "workflow",
@@ -1061,6 +984,7 @@
             "relatorios",
           ],
           AGENCY_USER: [
+            "empresas",
             "cadastrar",
             "consultar",
             "workflow",
@@ -1108,6 +1032,14 @@
         activeEl.checked = true;
       }
 
+      function configureEmpresasPane() {
+        const idEl = document.getElementById("companyFormId");
+        if (!idEl) return;
+        const formCol = idEl.closest(".col-lg-4");
+        if (!formCol) return;
+        formCol.style.display = userRole === "AGENCY_ADMIN" ? "" : "none";
+      }
+
       function parseUsefulLinksTextarea(value) {
         if (value == null) return null;
         const trimmed = value.trim();
@@ -1131,6 +1063,7 @@
         companies.forEach((c) => {
           const email = c.contactEmail || "-";
           const site = c.site || "-";
+          const canEdit = userRole === "AGENCY_ADMIN";
           html += `<tr>
             <td>${c.name}</td>
             <td><span class="badge text-bg-light">${c.type}</span></td>
@@ -1143,9 +1076,13 @@
                 <button class="btn btn-outline-secondary" onclick="copyText('${
                   c.id
                 }')">Copiar ID</button>
-                <button class="btn btn-outline-primary" onclick='editCompanyAdmin(${JSON.stringify(
-                  c
-                ).replace(/'/g, "&#39;")})'>Editar</button>
+                ${
+                  canEdit
+                    ? `<button class="btn btn-outline-primary" onclick='editCompanyAdmin(${JSON.stringify(
+                        c
+                      ).replace(/'/g, "&#39;")})'>Editar</button>`
+                    : ""
+                }
               </div>
             </td>
           </tr>`;
@@ -1154,12 +1091,40 @@
         container.innerHTML = html;
       }
 
+      function loadCompanies() {
+        if (userRole === "AGENCY_ADMIN") return loadCompaniesAdmin();
+        return loadCompaniesAgency();
+      }
+
+      async function loadCompaniesAgency() {
+        const container = document.getElementById("companiesList");
+        if (container)
+          container.innerHTML =
+            '<div class="skeleton rounded" style="height:80px;"></div>';
+        try {
+          configureEmpresasPane();
+          const res = await fetch(`${API_URL}/agency/companies`);
+          const data = await res.json();
+          if (!res.ok) {
+            throw new Error(
+              data.message || data.error || "Erro ao listar empresas"
+            );
+          }
+          renderCompaniesAdmin(data);
+        } catch (e) {
+          if (container)
+            container.innerHTML = `<div class="alert alert-danger">${e.message}</div>`;
+          showToast(e.message, "danger");
+        }
+      }
+
       async function loadCompaniesAdmin() {
         const container = document.getElementById("companiesList");
         if (container)
           container.innerHTML =
             '<div class="skeleton rounded" style="height:80px;"></div>';
         try {
+          configureEmpresasPane();
           const res = await fetch(`${API_URL}/admin/companies`);
           const data = await res.json();
           if (!res.ok) {
@@ -1176,6 +1141,10 @@
       }
 
       function editCompanyAdmin(company) {
+        if (userRole !== "AGENCY_ADMIN") {
+          showToast("Somente AGENCY_ADMIN pode editar empresas", "warning");
+          return;
+        }
         ensurePaneLoaded("empresas", () => {
           const idEl = document.getElementById("companyFormId");
           if (!idEl) return;
@@ -1204,6 +1173,13 @@
       }
 
       async function saveCompanyAdmin() {
+        if (userRole !== "AGENCY_ADMIN") {
+          showToast(
+            "Somente AGENCY_ADMIN pode cadastrar/editar empresas",
+            "warning"
+          );
+          return;
+        }
         const idEl = document.getElementById("companyFormId");
         if (!idEl) return;
 

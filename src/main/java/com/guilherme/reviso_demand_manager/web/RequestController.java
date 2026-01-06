@@ -70,7 +70,6 @@ public class RequestController {
             @RequestParam(required = false) RequestStatus status,
             @RequestParam(required = false) RequestPriority priority,
             @RequestParam(required = false) RequestType type,
-            @RequestParam(required = false) UUID clientId,
             @RequestParam(required = false) UUID companyId,
             @RequestParam(required = false) OffsetDateTime dueBefore,
             @RequestParam(required = false) OffsetDateTime createdFrom,
@@ -81,7 +80,7 @@ public class RequestController {
             @RequestParam(defaultValue = "desc") String direction) {
 
         Page<RequestDTO> requests = requestService.getAllRequests(
-            status, priority, type, clientId, companyId,
+            status, priority, type, companyId,
                 dueBefore, createdFrom, createdTo,
                 page, size, sortBy, direction
         );

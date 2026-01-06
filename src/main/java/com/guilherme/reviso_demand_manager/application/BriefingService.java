@@ -1,9 +1,11 @@
 package com.guilherme.reviso_demand_manager.application;
 
 import com.guilherme.reviso_demand_manager.domain.Briefing;
+import com.guilherme.reviso_demand_manager.domain.Company;
 import com.guilherme.reviso_demand_manager.domain.Request;
 import com.guilherme.reviso_demand_manager.domain.RequestStatus;
 import com.guilherme.reviso_demand_manager.infra.BriefingRepository;
+import com.guilherme.reviso_demand_manager.infra.CompanyRepository;
 import com.guilherme.reviso_demand_manager.infra.RequestRepository;
 import com.guilherme.reviso_demand_manager.web.BriefingDTO;
 import com.guilherme.reviso_demand_manager.web.CreateBriefingDTO;
@@ -21,10 +23,15 @@ public class BriefingService {
 
     private final BriefingRepository briefingRepository;
     private final RequestRepository requestRepository;
+    private final CompanyRepository companyRepository;
 
-    public BriefingService(BriefingRepository briefingRepository, RequestRepository requestRepository) {
+    public BriefingService(
+            BriefingRepository briefingRepository,
+            RequestRepository requestRepository,
+            CompanyRepository companyRepository) {
         this.briefingRepository = briefingRepository;
         this.requestRepository = requestRepository;
+        this.companyRepository = companyRepository;
     }
 
     @Transactional
@@ -94,7 +101,6 @@ public class BriefingService {
         Request request = new Request();
         request.setId(UUID.randomUUID());
         request.setCompanyId(briefing.getCompanyId());
-        request.setClientId(briefing.getCompanyId()); // Use company as client for now
         request.setBriefingId(briefing.getId());
         request.setTitle(briefing.getTitle());
         request.setDescription(briefing.getDescription());
@@ -129,6 +135,7 @@ public class BriefingService {
         return new BriefingDTO(
                 briefing.getId(),
                 briefing.getCompanyId(),
+                resolveCompanyName(briefing.getCompanyId()),
                 briefing.getCreatedByUserId(),
                 briefing.getTitle(),
                 briefing.getDescription(),
@@ -140,8 +147,8 @@ public class BriefingService {
     private RequestDTO toRequestDTO(Request request) {
         return new RequestDTO(
                 request.getId(),
-                request.getClientId(),
                 request.getCompanyId(),
+                resolveCompanyName(request.getCompanyId()),
                 request.getBriefingId(),
                 request.getTitle(),
                 request.getDescription(),
@@ -154,5 +161,12 @@ public class BriefingService {
                 request.getCreatedAt(),
                 request.getUpdatedAt()
         );
+    }
+
+    private String resolveCompanyName(UUID companyId) {
+        if (companyId == null) return null;
+        return companyRepository.findById(companyId)
+                .map(Company::getName)
+                .orElse(null);
     }
 }
