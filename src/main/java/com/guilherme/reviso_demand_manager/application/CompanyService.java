@@ -27,6 +27,10 @@ public class CompanyService {
         company.setName(dto.name());
         company.setType(dto.type());
         company.setActive(true);
+        company.setSegment(dto.segment());
+        company.setContactEmail(dto.contactEmail());
+        company.setSite(dto.site());
+        company.setUsefulLinks(dto.usefulLinks());
         company.setCreatedAt(OffsetDateTime.now());
 
         Company saved = companyRepository.save(company);
@@ -46,6 +50,10 @@ public class CompanyService {
                 company.getName(),
                 company.getType(),
                 company.getActive(),
+                company.getSegment(),
+                company.getContactEmail(),
+                company.getSite(),
+                company.getUsefulLinks(),
                 company.getCreatedAt()
         );
     }

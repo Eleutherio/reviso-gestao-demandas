@@ -95,6 +95,7 @@ public class BriefingService {
         request.setId(UUID.randomUUID());
         request.setCompanyId(briefing.getCompanyId());
         request.setClientId(briefing.getCompanyId()); // Use company as client for now
+        request.setBriefingId(briefing.getId());
         request.setTitle(briefing.getTitle());
         request.setDescription(briefing.getDescription());
         request.setStatus(RequestStatus.NEW);
@@ -141,6 +142,7 @@ public class BriefingService {
                 request.getId(),
                 request.getClientId(),
                 request.getCompanyId(),
+                request.getBriefingId(),
                 request.getTitle(),
                 request.getDescription(),
                 request.getType(),

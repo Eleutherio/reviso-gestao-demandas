@@ -30,6 +30,9 @@ public class Request {
 
     @Column(name = "company_id", columnDefinition = "UUID")
     private UUID companyId;
+
+    @Column(name = "briefing_id", columnDefinition = "UUID")
+    private UUID briefingId;
     
     @Column(nullable = false)
     private String title;
@@ -110,6 +113,14 @@ public class Request {
 
     public void setCompanyId(UUID companyId) {
         this.companyId = companyId;
+    }
+
+    public UUID getBriefingId() {
+        return briefingId;
+    }
+
+    public void setBriefingId(UUID briefingId) {
+        this.briefingId = briefingId;
     }
 
     public String getTitle() {

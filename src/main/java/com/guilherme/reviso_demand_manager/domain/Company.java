@@ -1,7 +1,10 @@
 package com.guilherme.reviso_demand_manager.domain;
 
 import jakarta.persistence.*;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 import java.time.OffsetDateTime;
+import java.util.List;
 import java.util.UUID;
 
 @Entity
@@ -21,6 +24,19 @@ public class Company {
 
     @Column(nullable = false)
     private Boolean active;
+
+    @Column(length = 160)
+    private String segment;
+
+    @Column(name = "contact_email", length = 160)
+    private String contactEmail;
+
+    @Column(length = 300)
+    private String site;
+
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "useful_links", columnDefinition = "jsonb")
+    private List<String> usefulLinks;
 
     @Column(name = "created_at", nullable = false)
     private OffsetDateTime createdAt;
@@ -55,6 +71,38 @@ public class Company {
 
     public void setActive(Boolean active) {
         this.active = active;
+    }
+
+    public String getSegment() {
+        return segment;
+    }
+
+    public void setSegment(String segment) {
+        this.segment = segment;
+    }
+
+    public String getContactEmail() {
+        return contactEmail;
+    }
+
+    public void setContactEmail(String contactEmail) {
+        this.contactEmail = contactEmail;
+    }
+
+    public String getSite() {
+        return site;
+    }
+
+    public void setSite(String site) {
+        this.site = site;
+    }
+
+    public List<String> getUsefulLinks() {
+        return usefulLinks;
+    }
+
+    public void setUsefulLinks(List<String> usefulLinks) {
+        this.usefulLinks = usefulLinks;
     }
 
     public OffsetDateTime getCreatedAt() {

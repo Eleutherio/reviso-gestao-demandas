@@ -13,6 +13,8 @@ public record CreateRequestDTO(
     UUID clientId,
 
     UUID companyId,
+
+    UUID briefingId,
     
     @NotBlank(message = "Title is required")
     String title,

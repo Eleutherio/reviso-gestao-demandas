@@ -35,6 +35,7 @@ public class RequestService {
         request.setId(UUID.randomUUID());
         request.setClientId(dto.clientId());
         request.setCompanyId(dto.companyId());
+        request.setBriefingId(dto.briefingId());
         request.setTitle(dto.title());
         request.setDescription(dto.description());
         request.setType(dto.type() != null ? dto.type() : RequestType.OTHER);
@@ -86,6 +87,7 @@ public class RequestService {
                 request.getId(),
                 request.getClientId(),
                 request.getCompanyId(),
+                request.getBriefingId(),
                 request.getTitle(),
                 request.getDescription(),
                 request.getType(),

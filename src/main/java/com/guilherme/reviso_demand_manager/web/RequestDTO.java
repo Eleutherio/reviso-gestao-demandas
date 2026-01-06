@@ -11,6 +11,7 @@ public record RequestDTO(
     UUID id,
     UUID clientId,
     UUID companyId,
+    UUID briefingId,
     String title,
     String description,
     RequestType type,
