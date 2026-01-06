@@ -80,6 +80,13 @@
     <nav class="navbar navbar-dark bg-dark mb-3">
       <div class="container-fluid">
         <span class="navbar-brand mb-0 h1">Reviso - Admin Console</span>
+        <button
+          id="logoutButton"
+          class="btn btn-outline-light btn-sm ms-auto"
+          onclick="logout()"
+        >
+          Sair
+        </button>
       </div>
     </nav>
 
@@ -165,672 +172,33 @@
           id="pane-clientes"
           role="tabpanel"
         >
-          <div class="row g-3">
-            <div class="col-lg-4">
-              <div class="card card-shadow">
-                <div class="card-body">
-                  <h5 class="card-title">Criar cliente</h5>
-                  <div class="mb-3">
-                    <label class="form-label">Nome *</label>
-                    <input
-                      class="form-control"
-                      id="clientName"
-                      placeholder="Ex: Agência Orion"
-                    />
-                  </div>
-                  <div class="mb-3">
-                    <label class="form-label">Segmento</label>
-                    <input
-                      class="form-control"
-                      id="clientSegment"
-                      placeholder="Ex: Publicidade"
-                    />
-                  </div>
-                  <button
-                    class="btn btn-success w-100"
-                    onclick="createClient()"
-                  >
-                    Criar
-                  </button>
-                </div>
-              </div>
-            </div>
-            <div class="col-lg-8">
-              <div class="card card-shadow">
-                <div class="card-body">
-                  <div
-                    class="d-flex justify-content-between align-items-center mb-2"
-                  >
-                    <h5 class="card-title mb-0">Clientes</h5>
-                    <button
-                      class="btn btn-outline-secondary btn-sm"
-                      onclick="listClients()"
-                    >
-                      Recarregar
-                    </button>
-                  </div>
-                  <div
-                    class="table-responsive list-scroll"
-                    id="clientList"
-                  ></div>
-                </div>
-              </div>
-            </div>
+          <div id="pane-clientes-content" class="p-2">
+            <div class="skeleton rounded" style="height: 80px"></div>
           </div>
         </div>
-
         <div class="tab-pane fade" id="pane-cadastrar" role="tabpanel">
-          <div class="row g-3">
-            <div class="col-lg-5 col-xl-4">
-              <div class="card card-shadow">
-                <div class="card-body">
-                  <h5 class="card-title">Cadastrar requisição de cliente</h5>
-                  <p class="text-muted small">
-                    Preencha os campos para abrir uma nova requisição.
-                  </p>
-                  <div class="mb-2">
-                    <label class="form-label">ID do cliente *</label
-                    ><input
-                      class="form-control"
-                      id="requestClientId"
-                      placeholder="UUID do cliente"
-                    />
-                  </div>
-                  <div class="mb-2">
-                    <label class="form-label">Título *</label
-                    ><input
-                      class="form-control"
-                      id="requestTitle"
-                      placeholder="Ex: Novo banner"
-                    />
-                  </div>
-                  <div class="mb-2">
-                    <label class="form-label">Descrição</label
-                    ><textarea
-                      class="form-control"
-                      id="requestDescription"
-                      rows="2"
-                      placeholder="Contexto e links"
-                    ></textarea>
-                  </div>
-                  <div class="mb-2">
-                    <label class="form-label">Tipo</label
-                    ><select class="form-select" id="requestType">
-                      <option value="">Selecione...</option>
-                      <option value="POST">Post</option>
-                      <option value="STORY">Story</option>
-                      <option value="BANNER">Banner</option>
-                      <option value="LANDING_PAGE">Landing page</option>
-                      <option value="TRAFFIC">Tráfego</option>
-                      <option value="EMAIL">E-mail</option>
-                      <option value="VIDEO">Vídeo</option>
-                      <option value="OTHER">Outro</option>
-                    </select>
-                  </div>
-                  <div class="mb-2">
-                    <label class="form-label">Prioridade</label
-                    ><select class="form-select" id="requestPriority">
-                      <option value="">Selecione...</option>
-                      <option value="LOW">Baixa</option>
-                      <option value="MEDIUM">Média</option>
-                      <option value="HIGH">Alta</option>
-                      <option value="URGENT">Urgente</option>
-                    </select>
-                  </div>
-                  <div class="mb-3">
-                    <label class="form-label">Vencimento</label
-                    ><input
-                      type="datetime-local"
-                      class="form-control"
-                      id="requestDueDate"
-                    />
-                  </div>
-                  <button
-                    class="btn btn-success w-100"
-                    onclick="createRequest()"
-                  >
-                    Criar requisição
-                  </button>
-                </div>
-              </div>
-            </div>
-            <div class="col-lg-7 col-xl-8">
-              <div class="card card-shadow h-100">
-                <div
-                  class="card-body d-flex align-items-center justify-content-center text-muted"
-                >
-                  <div class="text-center">
-                    <h6 class="mb-2">Dica</h6>
-                    <p class="mb-0">
-                      Após criar, use a aba "Consultar Requisições" para
-                      acompanhar, editar e mover no workflow.
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
+          <div id="pane-cadastrar-content" class="p-2">
+            <div class="skeleton rounded" style="height: 80px"></div>
           </div>
         </div>
-
         <div class="tab-pane fade" id="pane-consultar" role="tabpanel">
-          <div class="row g-3">
-            <div class="col-lg-4">
-              <div class="card card-shadow">
-                <div class="card-body">
-                  <div
-                    class="d-flex justify-content-between align-items-center mb-2"
-                  >
-                    <h6 class="mb-0">Filtros</h6>
-                    <button
-                      class="btn btn-outline-secondary btn-sm"
-                      onclick="clearFilters()"
-                    >
-                      Limpar
-                    </button>
-                  </div>
-                  <div class="mb-2">
-                    <label class="form-label">Cliente</label
-                    ><input
-                      class="form-control"
-                      id="filterClientId"
-                      placeholder="UUID"
-                    />
-                  </div>
-                  <div class="mb-2">
-                    <label class="form-label">Status</label
-                    ><select class="form-select" id="filterStatus">
-                      <option value="">Todos</option>
-                      <option value="NEW">Novo</option>
-                      <option value="IN_PROGRESS">Em progresso</option>
-                      <option value="IN_REVIEW">Em revisão</option>
-                      <option value="CHANGES_REQUESTED">
-                        Mudanças solicitadas
-                      </option>
-                      <option value="APPROVED">Aprovado</option>
-                      <option value="DELIVERED">Entregue</option>
-                      <option value="CLOSED">Encerrado</option>
-                    </select>
-                  </div>
-                  <div class="mb-2">
-                    <label class="form-label">Prioridade</label
-                    ><select class="form-select" id="filterPriority">
-                      <option value="">Todas</option>
-                      <option value="LOW">Baixa</option>
-                      <option value="MEDIUM">Média</option>
-                      <option value="HIGH">Alta</option>
-                      <option value="URGENT">Urgente</option>
-                    </select>
-                  </div>
-                  <div class="mb-2">
-                    <label class="form-label">Tipo</label
-                    ><select class="form-select" id="filterType">
-                      <option value="">Todos</option>
-                      <option value="POST">Post</option>
-                      <option value="STORY">Story</option>
-                      <option value="BANNER">Banner</option>
-                      <option value="LANDING_PAGE">Landing page</option>
-                      <option value="TRAFFIC">Tráfego</option>
-                      <option value="EMAIL">E-mail</option>
-                      <option value="VIDEO">Vídeo</option>
-                      <option value="OTHER">Outro</option>
-                    </select>
-                  </div>
-                  <div class="mb-2">
-                    <label class="form-label">Criado de</label
-                    ><input
-                      type="datetime-local"
-                      class="form-control"
-                      id="filterCreatedFrom"
-                    />
-                  </div>
-                  <div class="mb-2">
-                    <label class="form-label">Criado até</label
-                    ><input
-                      type="datetime-local"
-                      class="form-control"
-                      id="filterCreatedTo"
-                    />
-                  </div>
-                  <div class="mb-2">
-                    <label class="form-label">Vencimento até</label
-                    ><input
-                      type="datetime-local"
-                      class="form-control"
-                      id="filterDueBefore"
-                    />
-                  </div>
-                  <div class="row g-2 mb-2">
-                    <div class="col">
-                      <label class="form-label">Página</label
-                      ><input
-                        type="number"
-                        class="form-control"
-                        id="filterPage"
-                        value="0"
-                        min="0"
-                      />
-                    </div>
-                    <div class="col">
-                      <label class="form-label">Tamanho</label
-                      ><input
-                        type="number"
-                        class="form-control"
-                        id="filterSize"
-                        value="20"
-                        min="1"
-                        max="100"
-                      />
-                    </div>
-                  </div>
-                  <div class="row g-2 mb-3">
-                    <div class="col">
-                      <label class="form-label">Ordenar por</label
-                      ><select class="form-select" id="filterSortBy">
-                        <option value="createdAt">Criado em</option>
-                        <option value="dueDate">Vencimento</option>
-                        <option value="title">Título</option>
-                        <option value="priority">Prioridade</option>
-                      </select>
-                    </div>
-                    <div class="col">
-                      <label class="form-label">Direção</label
-                      ><select class="form-select" id="filterDirection">
-                        <option value="desc">Desc</option>
-                        <option value="asc">Asc</option>
-                      </select>
-                    </div>
-                  </div>
-                  <button
-                    class="btn btn-primary w-100"
-                    onclick="advancedSearch()"
-                  >
-                    Buscar
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            <div class="col-lg-8">
-              <div class="card card-shadow mb-3">
-                <div class="card-body">
-                  <div
-                    class="d-flex justify-content-between align-items-center mb-2"
-                  >
-                    <h5 class="mb-0">Requisições</h5>
-                    <div>
-                      <span class="text-muted small" id="reqSummary"></span>
-                    </div>
-                  </div>
-                  <div id="requestList" class="list-group list-scroll"></div>
-                </div>
-              </div>
-
-              <div
-                class="card card-shadow"
-                id="detailCard"
-                style="display: none"
-              >
-                <div class="card-body">
-                  <div
-                    class="d-flex justify-content-between align-items-start mb-2"
-                  >
-                    <div>
-                      <h5 id="detailTitle" class="mb-1"></h5>
-                      <div class="text-muted small" id="detailId"></div>
-                    </div>
-                    <div class="btn-group btn-group-sm">
-                      <button
-                        class="btn btn-outline-secondary"
-                        onclick="copySelectedId()"
-                      >
-                        Copiar ID
-                      </button>
-                      <button
-                        class="btn btn-outline-primary"
-                        onclick="openWorkflowTab()"
-                      >
-                        Abrir no Workflow
-                      </button>
-                    </div>
-                  </div>
-                  <div class="mb-2" id="detailBadges"></div>
-                  <p class="text-secondary" id="detailDescription"></p>
-                  <div class="row g-2 mb-3">
-                    <div class="col-md-4">
-                      <small class="text-muted">Cliente</small>
-                      <div id="detailClient"></div>
-                    </div>
-                    <div class="col-md-4">
-                      <small class="text-muted">Vencimento</small>
-                      <div id="detailDue"></div>
-                    </div>
-                    <div class="col-md-4">
-                      <small class="text-muted">Revisões</small>
-                      <div id="detailRevision"></div>
-                    </div>
-                  </div>
-                  <div class="row g-2 mb-4">
-                    <div class="col-md-6">
-                      <small class="text-muted">Responsável</small>
-                      <div id="detailAssignee"></div>
-                    </div>
-                    <div class="col-md-6">
-                      <small class="text-muted">Criado/Atualizado</small>
-                      <div id="detailDates"></div>
-                    </div>
-                  </div>
-
-                  <div class="row g-3">
-                    <div class="col-lg-6">
-                      <h6>Alterar status</h6>
-                      <div class="mb-2">
-                        <label class="form-label">Novo status</label
-                        ><select class="form-select" id="wfStatus">
-                          <option value="">Selecione</option>
-                          <option value="NEW">Novo</option>
-                          <option value="IN_PROGRESS">Em progresso</option>
-                          <option value="IN_REVIEW">Em revisão</option>
-                          <option value="CHANGES_REQUESTED">
-                            Mudanças solicitadas
-                          </option>
-                          <option value="APPROVED">Aprovado</option>
-                          <option value="DELIVERED">Entregue</option>
-                          <option value="CLOSED">Encerrado</option>
-                        </select>
-                      </div>
-                      <div class="mb-2">
-                        <label class="form-label">Mensagem</label
-                        ><input
-                          class="form-control"
-                          id="wfStatusMsg"
-                          placeholder="Contexto"
-                        />
-                      </div>
-                      <button
-                        class="btn btn-primary w-100"
-                        onclick="changeStatusAction()"
-                      >
-                        Salvar
-                      </button>
-                    </div>
-                    <div class="col-lg-6">
-                      <h6>Comentário</h6>
-                      <div class="mb-2">
-                        <textarea
-                          class="form-control"
-                          id="wfComment"
-                          rows="3"
-                          placeholder="Mensagem"
-                        ></textarea>
-                      </div>
-                      <button
-                        class="btn btn-outline-primary w-100"
-                        onclick="addCommentAction()"
-                      >
-                        Adicionar comentário
-                      </button>
-                    </div>
-                    <div class="col-lg-6">
-                      <h6>Revisão</h6>
-                      <div class="mb-2">
-                        <textarea
-                          class="form-control"
-                          id="wfRevisionMsg"
-                          rows="2"
-                          placeholder="Detalhes"
-                        ></textarea>
-                      </div>
-                      <button
-                        class="btn btn-outline-secondary w-100"
-                        onclick="addRevisionAction()"
-                      >
-                        Registrar revisão
-                      </button>
-                    </div>
-                    <div class="col-lg-6">
-                      <h6>Atribuir</h6>
-                      <div class="mb-2">
-                        <input
-                          class="form-control"
-                          id="wfAssignee"
-                          placeholder="UUID do responsável"
-                        />
-                      </div>
-                      <button
-                        class="btn btn-outline-dark w-100"
-                        onclick="assignAction()"
-                      >
-                        Atribuir
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
+          <div id="pane-consultar-content" class="p-2">
+            <div class="skeleton rounded" style="height: 120px"></div>
           </div>
         </div>
-
         <div class="tab-pane fade" id="pane-workflow" role="tabpanel">
-          <div class="card card-shadow">
-            <div class="card-body">
-              <h5 class="card-title">Workflow rápido</h5>
-              <div class="row g-3">
-                <div class="col-md-4">
-                  <label class="form-label">ID da requisição *</label>
-                  <input
-                    class="form-control"
-                    id="workflowRequestId"
-                    placeholder="UUID"
-                  />
-                </div>
-                <div class="col-md-4">
-                  <label class="form-label">ID do ator (opcional)</label>
-                  <input
-                    class="form-control"
-                    id="workflowActorId"
-                    placeholder="UUID"
-                  />
-                </div>
-                <div class="col-md-4 d-flex align-items-end">
-                  <button
-                    class="btn btn-outline-secondary w-100"
-                    onclick="prefillWorkflowFromSelection()"
-                  >
-                    Usar selecionada
-                  </button>
-                </div>
-              </div>
-              <hr />
-              <div class="row g-3">
-                <div class="col-lg-6">
-                  <h6>Alterar status</h6>
-                  <select class="form-select mb-2" id="workflowNewStatus">
-                    <option value="">Selecione...</option>
-                    <option value="NEW">Novo</option>
-                    <option value="IN_PROGRESS">Em progresso</option>
-                    <option value="IN_REVIEW">Em revisão</option>
-                    <option value="CHANGES_REQUESTED">
-                      Mudanças solicitadas
-                    </option>
-                    <option value="APPROVED">Aprovado</option>
-                    <option value="DELIVERED">Entregue</option>
-                    <option value="CLOSED">Encerrado</option>
-                  </select>
-                  <input
-                    class="form-control mb-2"
-                    id="workflowStatusMessage"
-                    placeholder="Mensagem"
-                  />
-                  <button
-                    class="btn btn-primary w-100"
-                    onclick="changeStatusWorkflow()"
-                  >
-                    Alterar
-                  </button>
-                </div>
-                <div class="col-lg-6">
-                  <h6>Comentário</h6>
-                  <textarea
-                    class="form-control mb-2"
-                    id="workflowComment"
-                    rows="2"
-                    placeholder="Mensagem"
-                  ></textarea>
-                  <button
-                    class="btn btn-outline-primary w-100"
-                    onclick="addCommentWorkflow()"
-                  >
-                    Comentar
-                  </button>
-                </div>
-                <div class="col-lg-6">
-                  <h6>Revisão</h6>
-                  <textarea
-                    class="form-control mb-2"
-                    id="workflowRevisionMessage"
-                    rows="2"
-                    placeholder="Detalhes"
-                  ></textarea>
-                  <button
-                    class="btn btn-outline-secondary w-100"
-                    onclick="addRevisionWorkflow()"
-                  >
-                    Registrar
-                  </button>
-                </div>
-                <div class="col-lg-6">
-                  <h6>Atribuir</h6>
-                  <input
-                    class="form-control mb-2"
-                    id="workflowAssigneeId"
-                    placeholder="UUID do responsável"
-                  />
-                  <button
-                    class="btn btn-outline-dark w-100"
-                    onclick="assignWorkflow()"
-                  >
-                    Atribuir
-                  </button>
-                </div>
-              </div>
-              <div class="mt-3 d-flex gap-2">
-                <button class="btn btn-secondary" onclick="listEvents()">
-                  Carregar eventos
-                </button>
-                <div
-                  class="spinner-border spinner-border-sm text-primary"
-                  role="status"
-                  id="workflowLoading"
-                  style="display: none"
-                ></div>
-              </div>
-              <div
-                class="mt-3"
-                id="workflowResponse"
-                style="display: none"
-              ></div>
-              <div class="mt-3" id="workflowEvents" style="display: none"></div>
-            </div>
+          <div id="pane-workflow-content" class="p-2">
+            <div class="skeleton rounded" style="height: 80px"></div>
           </div>
         </div>
-
         <div class="tab-pane fade" id="pane-eventos" role="tabpanel">
-          <div class="card card-shadow">
-            <div class="card-body">
-              <div
-                class="d-flex justify-content-between align-items-center mb-2"
-              >
-                <h5 class="card-title mb-0">Eventos da requisição</h5>
-                <button
-                  class="btn btn-outline-secondary btn-sm"
-                  onclick="loadEventsFromSelection()"
-                >
-                  Recarregar
-                </button>
-              </div>
-              <div id="eventsList"></div>
-            </div>
+          <div id="pane-eventos-content" class="p-2">
+            <div class="skeleton rounded" style="height: 80px"></div>
           </div>
         </div>
-
         <div class="tab-pane fade" id="pane-relatorios" role="tabpanel">
-          <div class="card card-shadow mb-3">
-            <div class="card-body">
-              <h5 class="card-title">Período de análise</h5>
-              <div class="row g-2 mb-3">
-                <div class="col-md-4">
-                  <label class="form-label">De</label>
-                  <input
-                    type="datetime-local"
-                    class="form-control"
-                    id="reportFrom"
-                  />
-                </div>
-                <div class="col-md-4">
-                  <label class="form-label">Até</label>
-                  <input
-                    type="datetime-local"
-                    class="form-control"
-                    id="reportTo"
-                  />
-                </div>
-                <div class="col-md-4 d-flex align-items-end">
-                  <button class="btn btn-primary w-100" onclick="loadReports()">
-                    Carregar relatórios
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div class="row g-3">
-            <div class="col-md-6 col-lg-3">
-              <div class="card card-shadow">
-                <div class="card-body">
-                  <h6 class="card-title text-muted">Requisições atrasadas</h6>
-                  <div class="display-5" id="overdueTotal">-</div>
-                </div>
-              </div>
-            </div>
-
-            <div class="col-md-6 col-lg-3">
-              <div class="card card-shadow">
-                <div class="card-body">
-                  <h6 class="card-title text-muted">Tempo médio de ciclo</h6>
-                  <div class="display-5" id="avgCycleTime">-</div>
-                  <small class="text-muted" id="avgCycleDetails"></small>
-                </div>
-              </div>
-            </div>
-
-            <div class="col-md-6 col-lg-3">
-              <div class="card card-shadow">
-                <div class="card-body">
-                  <h6 class="card-title text-muted">Retrabalho (%)</h6>
-                  <div class="display-5" id="reworkPercentage">-</div>
-                  <small class="text-muted" id="reworkDetails"></small>
-                </div>
-              </div>
-            </div>
-
-            <div class="col-md-6 col-lg-3">
-              <div class="card card-shadow">
-                <div class="card-body">
-                  <h6 class="card-title text-muted">Total no período</h6>
-                  <div class="display-5" id="totalRequests">-</div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div class="card card-shadow mt-3">
-            <div class="card-body">
-              <h6 class="card-title">Requisições por status</h6>
-              <div
-                id="statusChart"
-                style="max-height: 300px; overflow-y: auto"
-              ></div>
-            </div>
+          <div id="pane-relatorios-content" class="p-2">
+            <div class="skeleton rounded" style="height: 80px"></div>
           </div>
         </div>
       </div>
@@ -1441,13 +809,6 @@
         }
       }
 
-      function init() {
-        listClients();
-        clearFilters();
-        advancedSearch();
-        initReports();
-      }
-
       function initReports() {
         const now = new Date();
         const thirtyDaysAgo = new Date(
@@ -1578,7 +939,140 @@
         container.innerHTML = html;
       }
 
+      // Lazy-load de conteúdo das abas
+      const paneUrls = {
+        clientes: "/tabs/clientes.html",
+        cadastrar: "/tabs/cadastrar.html",
+        consultar: "/tabs/consultar.html",
+        workflow: "/tabs/workflow.html",
+        eventos: "/tabs/eventos.html",
+        relatorios: "/tabs/relatorios.html",
+      };
+
+      function ensurePaneLoaded(key, after) {
+        const containerId = `pane-${key}-content`;
+        const el = document.getElementById(containerId);
+        if (!el) return;
+        if (el.dataset.loaded === "true") {
+          if (after) after();
+          return;
+        }
+        fetch(paneUrls[key])
+          .then((r) => r.text())
+          .then((html) => {
+            el.innerHTML = html;
+            el.dataset.loaded = "true";
+            if (after) after();
+          })
+          .catch((e) => {
+            el.innerHTML = `<div class="alert alert-danger">Erro ao carregar: ${e.message}</div>`;
+          });
+      }
+
+      // Carregar aba quando ficar visível
+      const tabKeyMap = {
+        "tab-cliente": "clientes",
+        "tab-cadastrar": "cadastrar",
+        "tab-consultar": "consultar",
+        "tab-workflow": "workflow",
+        "tab-eventos": "eventos",
+        "tab-relatorios": "relatorios",
+      };
+      document
+        .querySelectorAll('#mainTabs button[data-bs-toggle="pill"]')
+        .forEach((btn) => {
+          btn.addEventListener("shown.bs.tab", (ev) => {
+            const key = tabKeyMap[ev.target.id];
+            if (key) ensurePaneLoaded(key);
+          });
+        });
+
+      function init() {
+        // Carregar conteúdo necessário antes de usar funções
+        ensurePaneLoaded("clientes", listClients);
+        ensurePaneLoaded("consultar", () => {
+          clearFilters();
+          advancedSearch();
+        });
+        ensurePaneLoaded("relatorios", initReports);
+      }
+
       document.addEventListener("DOMContentLoaded", init);
+
+      // Controle de sessão e visibilidade de abas por role
+      const authToken = localStorage.getItem("authToken");
+      const userRole = localStorage.getItem("userRole");
+      if (!authToken || !userRole) {
+        window.location.href = "/login.html";
+      }
+
+      // Wrapper para sempre enviar Authorization
+      const nativeFetch = window.fetch.bind(window);
+      window.fetch = (input, init = {}) => {
+        const headers = new Headers(init.headers || {});
+        if (authToken) headers.set("Authorization", `Bearer ${authToken}`);
+        return nativeFetch(input, { ...init, headers });
+      };
+
+      function applyRoleVisibility() {
+        const tabIds = {
+          clientes: "tab-cliente",
+          cadastrar: "tab-cadastrar",
+          consultar: "tab-consultar",
+          workflow: "tab-workflow",
+          eventos: "tab-eventos",
+          relatorios: "tab-relatorios",
+        };
+
+        const roleVisibility = {
+          AGENCY_ADMIN: [
+            "clientes",
+            "cadastrar",
+            "consultar",
+            "workflow",
+            "eventos",
+            "relatorios",
+          ],
+          AGENCY_USER: [
+            "cadastrar",
+            "consultar",
+            "workflow",
+            "eventos",
+            "relatorios",
+          ],
+          CLIENT_USER: ["consultar", "workflow"],
+        };
+
+        const allowed = roleVisibility[userRole] || [];
+        Object.entries(tabIds).forEach(([key, id]) => {
+          const btn = document.getElementById(id);
+          const li = btn?.closest("li");
+          if (!btn || !li) return;
+          const visible = allowed.includes(key);
+          li.style.display = visible ? "" : "none";
+          if (!visible && btn.classList.contains("active")) {
+            const firstAllowed = allowed
+              .map((k) => tabIds[k])
+              .map((tid) => document.getElementById(tid))
+              .find(Boolean);
+            if (firstAllowed) new bootstrap.Tab(firstAllowed).show();
+          }
+        });
+      }
+
+      applyRoleVisibility();
+
+      function logout() {
+        try {
+          localStorage.removeItem("authToken");
+          localStorage.removeItem("userRole");
+          localStorage.removeItem("userName");
+          localStorage.removeItem("userEmail");
+          localStorage.removeItem("userCompanyId");
+        } finally {
+          window.location.href = "/login.html";
+        }
+      }
     </script>
   </body>
 </html>

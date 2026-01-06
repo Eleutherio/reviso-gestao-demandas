@@ -6,7 +6,6 @@ import com.guilherme.reviso_demand_manager.infra.RateLimitService;
 import com.guilherme.reviso_demand_manager.infra.UserRepository;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;

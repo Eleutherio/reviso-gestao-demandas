@@ -420,30 +420,18 @@
           authToken = data.token;
           currentUser = data;
 
+          // Persiste contexto mínimo e redireciona para index.html, onde as abas são controladas por role
+          localStorage.setItem("authToken", data.token);
+          localStorage.setItem("userRole", data.role);
+          localStorage.setItem("userName", data.fullName || "");
+          localStorage.setItem("userEmail", data.email || "");
+          localStorage.setItem("userCompanyId", data.companyId || "");
+
           closeLoginModal();
-          document.getElementById("selectionScreen").style.display = "none";
-          document.getElementById("appScreen").style.display = "block";
-
-          const portalTitle =
-            currentUserType === "AGENCY"
-              ? "Portal da Agência"
-              : "Portal do Cliente";
-          document.getElementById("portalTitle").textContent = portalTitle;
-          document.getElementById(
-            "userInfo"
-          ).textContent = `${data.fullName} (${data.role})`;
-
           showToast(`Bem-vindo, ${data.fullName}!`, "success");
-
-          if (currentUserType === "AGENCY") {
-            document.getElementById("mainTabs").style.display = "flex";
-            loadBriefings();
-          } else {
-            document.getElementById("tab-briefings").style.display = "none";
-            document.getElementById("mainTabs").style.display = "flex";
-            document.getElementById("tab-requests").click();
-            loadMyRequests();
-          }
+          setTimeout(() => {
+            window.location.href = "/index.html";
+          }, 300);
         } catch (error) {
           showToast("Erro ao conectar ao servidor", "error");
         }
