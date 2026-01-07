@@ -2,6 +2,7 @@ package com.guilherme.reviso_demand_manager.web;
 
 import com.guilherme.reviso_demand_manager.application.BriefingService;
 import com.guilherme.reviso_demand_manager.application.CompanyService;
+import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -32,8 +33,10 @@ public class AgencyController {
     }
 
     @PostMapping("/briefings/{id}/convert")
-    public ResponseEntity<RequestDTO> convertBriefingToRequest(@PathVariable UUID id) {
-        RequestDTO request = briefingService.convertBriefingToRequest(id);
+    public ResponseEntity<RequestDTO> convertBriefingToRequest(
+            @PathVariable UUID id,
+            @Valid @RequestBody ConvertBriefingDTO dto) {
+        RequestDTO request = briefingService.convertBriefingToRequest(id, dto.department());
         return ResponseEntity.ok(request);
     }
 

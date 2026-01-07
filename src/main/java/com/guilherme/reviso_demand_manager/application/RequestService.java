@@ -43,6 +43,7 @@ public class RequestService {
         request.setDescription(dto.description());
         request.setType(dto.type() != null ? dto.type() : RequestType.OTHER);
         request.setPriority(dto.priority() != null ? dto.priority() : RequestPriority.MEDIUM);
+        request.setDepartment(dto.department());
         request.setStatus(RequestStatus.NEW);
         request.setDueDate(dto.dueDate());
         request.setRevisionCount(0);
@@ -94,6 +95,7 @@ public class RequestService {
                 request.getDescription(),
                 request.getType(),
                 request.getPriority(),
+                request.getDepartment(),
                 request.getStatus(),
             request.getAssigneeId(),
                 request.getDueDate(),

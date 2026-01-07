@@ -1,9 +1,12 @@
 package com.guilherme.reviso_demand_manager.application;
 
 import com.guilherme.reviso_demand_manager.domain.Briefing;
+import com.guilherme.reviso_demand_manager.domain.AgencyDepartment;
 import com.guilherme.reviso_demand_manager.domain.Company;
 import com.guilherme.reviso_demand_manager.domain.Request;
+import com.guilherme.reviso_demand_manager.domain.RequestPriority;
 import com.guilherme.reviso_demand_manager.domain.RequestStatus;
+import com.guilherme.reviso_demand_manager.domain.RequestType;
 import com.guilherme.reviso_demand_manager.infra.BriefingRepository;
 import com.guilherme.reviso_demand_manager.infra.CompanyRepository;
 import com.guilherme.reviso_demand_manager.infra.RequestRepository;
@@ -89,9 +92,13 @@ public class BriefingService {
     }
 
     @Transactional
-    public RequestDTO convertBriefingToRequest(UUID briefingId) {
+    public RequestDTO convertBriefingToRequest(UUID briefingId, AgencyDepartment department) {
         Briefing briefing = briefingRepository.findById(briefingId)
                 .orElseThrow(() -> new ResourceNotFoundException("Briefing não encontrado"));
+
+        if (department == null) {
+            throw new IllegalArgumentException("Departamento é obrigatório");
+        }
 
         if (!"PENDING".equals(briefing.getStatus())) {
             throw new IllegalStateException("Apenas briefings PENDING podem ser convertidos");
@@ -104,6 +111,9 @@ public class BriefingService {
         request.setBriefingId(briefing.getId());
         request.setTitle(briefing.getTitle());
         request.setDescription(briefing.getDescription());
+        request.setType(RequestType.OTHER);
+        request.setPriority(RequestPriority.MEDIUM);
+        request.setDepartment(department);
         request.setStatus(RequestStatus.NEW);
         request.setRevisionCount(0);
         request.setCreatedAt(OffsetDateTime.now());
@@ -154,6 +164,7 @@ public class BriefingService {
                 request.getDescription(),
                 request.getType(),
                 request.getPriority(),
+                request.getDepartment(),
                 request.getStatus(),
                 request.getAssigneeId(),
                 request.getDueDate(),

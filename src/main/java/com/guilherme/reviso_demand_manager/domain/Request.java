@@ -3,6 +3,7 @@ package com.guilherme.reviso_demand_manager.domain;
 import jakarta.persistence.*;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
+
 import java.time.OffsetDateTime;
 import java.util.Map;
 import java.util.Set;
@@ -46,6 +47,10 @@ public class Request {
     @JdbcTypeCode(SqlTypes.NAMED_ENUM)
     @Column(name = "priority", columnDefinition = "request_priority")
     private RequestPriority priority;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "department", nullable = false, length = 30)
+    private AgencyDepartment department;
     
     @Enumerated(EnumType.STRING)
     @JdbcTypeCode(SqlTypes.NAMED_ENUM)
@@ -141,6 +146,14 @@ public class Request {
 
     public void setPriority(RequestPriority priority) {
         this.priority = priority;
+    }
+
+    public AgencyDepartment getDepartment() {
+        return department;
+    }
+
+    public void setDepartment(AgencyDepartment department) {
+        this.department = department;
     }
 
     public RequestStatus getStatus() {
