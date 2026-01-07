@@ -29,7 +29,23 @@ export class ShellComponent {
       path: '/agency/briefings/inbox',
       roles: ['AGENCY_USER', 'AGENCY_ADMIN'],
     },
+    {
+      label: 'Workflow',
+      path: '/agency/workflow',
+      roles: ['AGENCY_USER', 'AGENCY_ADMIN'],
+    },
+    {
+      label: 'Eventos',
+      path: '/agency/events',
+      roles: ['AGENCY_USER', 'AGENCY_ADMIN'],
+    },
+    {
+      label: 'Criar requisição',
+      path: '/agency/requests/new',
+      roles: ['AGENCY_USER', 'AGENCY_ADMIN'],
+    },
     { label: 'Requisições', path: '/agency/requests', roles: ['AGENCY_USER', 'AGENCY_ADMIN'] },
+    { label: 'Relatórios', path: '/agency/reports', roles: ['AGENCY_USER', 'AGENCY_ADMIN'] },
 
     { label: 'Empresas', path: '/admin/companies', roles: ['AGENCY_ADMIN'] },
     { label: 'Usuários', path: '/admin/users', roles: ['AGENCY_ADMIN'] },
