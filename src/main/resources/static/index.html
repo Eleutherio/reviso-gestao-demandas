@@ -288,6 +288,9 @@
         const type = document.getElementById("requestType").value || null;
         const priority =
           document.getElementById("requestPriority").value || null;
+        const department = document.getElementById("requestDepartment").value;
+        if (!department)
+          return showToast("Departamento é obrigatório", "danger");
         const dueDate = document.getElementById("requestDueDate").value;
         let dueDateISO;
         if (dueDate) dueDateISO = new Date(dueDate).toISOString();
@@ -297,6 +300,7 @@
           description: description || undefined,
           type: type || undefined,
           priority: priority || undefined,
+          department,
           dueDate: dueDateISO,
         };
         try {
@@ -313,11 +317,23 @@
             document.getElementById("requestDescription").value = "";
             document.getElementById("requestType").value = "";
             document.getElementById("requestPriority").value = "";
+            document.getElementById("requestDepartment").value = "";
             document.getElementById("requestDueDate").value = "";
             advancedSearch();
             selectRequest(data);
           } else {
-            showToast(data.message || "Erro ao criar", "danger");
+            const deptError = data?.errors?.department;
+            const companyError = data?.errors?.companyId;
+            const titleError = data?.errors?.title;
+            showToast(
+              deptError ||
+                companyError ||
+                titleError ||
+                data.message ||
+                data.error ||
+                "Erro ao criar",
+              "danger"
+            );
           }
         } catch (e) {
           showToast(e.message, "danger");
@@ -393,7 +409,7 @@
               req.title
             }</strong> ${statusBadge(req.status)} ${priorityBadge(
               req.priority
-            )}</div>
+            )} <span class="badge text-bg-light">${req.department}</span></div>
             <div class="text-muted small">ID ${req.id.substring(
               0,
               8
@@ -443,8 +459,8 @@
         document.getElementById("detailBadges").innerHTML = `${statusBadge(
           req.status
         )} ${priorityBadge(req.priority)} <span class="badge text-bg-light">${
-          req.type
-        }</span>`;
+          req.department
+        }</span> <span class="badge text-bg-light">${req.type}</span>`;
         document.getElementById("wfStatus").value = "";
         document.getElementById("wfStatusMsg").value = "";
         document.getElementById("wfComment").value = "";

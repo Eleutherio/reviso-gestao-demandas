@@ -516,6 +516,18 @@
             <p><strong>Descrição:</strong></p>
             <p>${selectedBriefing.description || "Sem descrição"}</p>
             <hr />
+            <div class="mb-3">
+              <label class="form-label">Departamento *</label>
+              <select class="form-select" id="convertDepartment">
+                <option value="">Selecione...</option>
+                <option value="DESIGN">Design</option>
+                <option value="COPY">Copy</option>
+                <option value="DEV">Dev</option>
+                <option value="PLANNING">Planejamento</option>
+                <option value="PRODUCTION">Produção</option>
+                <option value="MEDIA">Mídia</option>
+              </select>
+            </div>
             <div class="d-flex gap-2 mt-3">
               <button class="btn btn-success" onclick="convertToRequest()">
                 Converter em Requisição
@@ -550,15 +562,24 @@
       async function convertToRequest() {
         if (!selectedBriefing) return;
 
+        const department = document.getElementById("convertDepartment")?.value;
+        if (!department) {
+          showToast("Departamento é obrigatório", "error");
+          return;
+        }
+
         try {
           const response = await fetchWithAuth(
             `${API_URL}/agency/briefings/${selectedBriefing.id}/convert`,
-            { method: "POST" }
+            { method: "POST", body: JSON.stringify({ department }) }
           );
 
           if (!response.ok) {
             const error = await response.json();
-            showToast(error.error || "Erro ao converter", "error");
+            showToast(
+              error.message || error.error || "Erro ao converter",
+              "error"
+            );
             return;
           }
 
