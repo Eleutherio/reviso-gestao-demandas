@@ -21,12 +21,16 @@ Centraliza pedidos (peças, campanhas, landing pages etc.), controla status, pra
 
 - Backend (Spring Boot): `backend/`
 - Frontend (Angular): `frontend/`
+- Documentação: `docs/`
+- Arquivos auxiliares de banco: `db/`
 
 ## Requisitos
 
 - JDK 21+
 - Maven Wrapper (`./mvnw`) incluído
-- PostgreSQL rodando em `localhost:5432` com database `reviso` e usuário/senha `reviso` (ajuste em `backend/src/main/resources/application.properties` se necessário)
+- Docker + Docker Compose (recomendado para rodar a stack completa)
+
+Para rodar o backend fora do Docker, você vai precisar de PostgreSQL acessível localmente e ajustar as configs em `backend/src/main/resources/application.properties` (ou variáveis de ambiente).
 
 ## Endpoints principais
 
@@ -41,19 +45,12 @@ Centraliza pedidos (peças, campanhas, landing pages etc.), controla status, pra
   - `GET /requests/mine` – lista demandas do cliente logado
   - `GET /requests/{id}/events?onlyVisibleToClient=true` – eventos visíveis ao cliente
 
-## Arquitetura e Foundation
+Documentação mais completa (B2B/RBAC/exemplos): veja `docs/API_B2B.md`.
 
-### Schema preparado para crescimento
+## Banco de dados
 
-O schema do banco de dados (migrations Flyway) já inclui tabelas e tipos preparados para funcionalidades futuras:
-
-- **Tabelas**: `users`, `projects`, `request_events` (audit trail)
-- **Enums nativos PostgreSQL**: `request_type`, `request_priority`, `request_status`, `request_event_type`
-
-**Estado atual do código**: implementado `Client` e `Request` (core funcional Day 2).  
-**Próximas fases**: autenticação (`users`), agrupamento de demandas (`projects`), histórico completo (`request_events`).
-
-Essa abordagem "foundation-first" facilita evolução incremental sem quebrar migrations ou exigir refatorações de schema.
+- Migrations Flyway: `backend/src/main/resources/db/migration`
+- Para seed local: `db/seed_data.sql`
 
 ## Interface web
 
@@ -66,7 +63,7 @@ Essa abordagem "foundation-first" facilita evolução incremental sem quebrar mi
 Subir tudo (Postgres + API + Angular via Nginx):
 
 ```bash
-docker compose up --build
+docker compose up -d --build
 ```
 
 - Backend (API): `http://localhost:8080`
@@ -76,7 +73,7 @@ Para ajustar o redirect do backend `/`, defina `FRONTEND_BASE_URL` no compose/en
 
 ## Frontend Angular (Core)
 
-O projeto Angular fica em [frontend](frontend). Nesta etapa ele contém apenas o App Shell + Auth + rotas (telas placeholder), consumindo o backend via proxy.
+O projeto Angular fica em [frontend](frontend) e consome o backend via proxy em `/api/*`.
 
 Rodar no dev:
 
@@ -98,6 +95,7 @@ Observação: no Portal do Cliente, os campos extras (Tipo, Prioridade e Vencime
 ## Monitoramento
 
 - Actuator habilitado: `http://localhost:8080/actuator/health`
+- Health via proxy do frontend: `http://localhost:4200/api/actuator/health`
 
 ## Licença
 

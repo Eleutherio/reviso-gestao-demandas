@@ -183,7 +183,6 @@ coverage.xml
 *.cover
 
 # Temp/Working files
-agents.md
 TODO.md
 NOTES.md
 scratch/
