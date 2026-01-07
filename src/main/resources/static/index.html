@@ -74,6 +74,18 @@
           font-size: 0.9rem;
         }
       }
+
+      .companies-table {
+        --bs-table-cell-padding-x: 0.25rem;
+        --bs-table-cell-padding-y: 0.2rem;
+      }
+
+      .companies-table > :not(caption) > * > * {
+        padding-top: var(--bs-table-cell-padding-y);
+        padding-bottom: var(--bs-table-cell-padding-y);
+        padding-left: var(--bs-table-cell-padding-x);
+        padding-right: var(--bs-table-cell-padding-x);
+      }
     </style>
   </head>
   <body>
@@ -210,6 +222,8 @@
     <script>
       const API_URL = "http://localhost:8080";
       let requestsCache = [];
+      let companiesCache = [];
+      const revealedCompanyIds = new Set();
       let selectedRequest = null;
 
       function showToast(message, type = "success") {
@@ -228,6 +242,34 @@
         navigator.clipboard
           .writeText(text)
           .then(() => showToast("Copiado", "primary"));
+      }
+
+      function copyCompanyIdFromCell(companyId, cellId) {
+        if (!companyId) return;
+        const el = document.getElementById(cellId);
+        navigator.clipboard.writeText(companyId).then(() => {
+          if (el) {
+            el.classList.add("bg-warning-subtle");
+            setTimeout(() => el.classList.remove("bg-warning-subtle"), 450);
+          }
+          showToast("ID copiado", "primary");
+        });
+      }
+
+      function revealCompanyId(companyId) {
+        if (!companyId) return;
+        revealedCompanyIds.add(companyId);
+        renderCompaniesAdmin(companiesCache);
+      }
+
+      function toggleCompanyId(companyId) {
+        if (!companyId) return;
+        if (revealedCompanyIds.has(companyId)) {
+          revealedCompanyIds.delete(companyId);
+        } else {
+          revealedCompanyIds.add(companyId);
+        }
+        renderCompaniesAdmin(companiesCache);
       }
 
       function statusBadge(status) {
@@ -768,12 +810,26 @@
       }
 
       function initReports() {
+        function pad2(n) {
+          return String(n).padStart(2, "0");
+        }
+
+        function toDateTimeLocalValue(d) {
+          const year = d.getFullYear();
+          const month = pad2(d.getMonth() + 1);
+          const day = pad2(d.getDate());
+          const hours = pad2(d.getHours());
+          const minutes = pad2(d.getMinutes());
+          return `${year}-${month}-${day}T${hours}:${minutes}`;
+        }
+
         const now = new Date();
         const thirtyDaysAgo = new Date(
           now.getTime() - 30 * 24 * 60 * 60 * 1000
         );
-        document.getElementById("reportFrom").valueAsDate = thirtyDaysAgo;
-        document.getElementById("reportTo").valueAsDate = now;
+        document.getElementById("reportFrom").value =
+          toDateTimeLocalValue(thirtyDaysAgo);
+        document.getElementById("reportTo").value = toDateTimeLocalValue(now);
       }
 
       async function loadReports() {
@@ -1054,6 +1110,21 @@
         const formCol = idEl.closest(".col-lg-4");
         if (!formCol) return;
         formCol.style.display = userRole === "AGENCY_ADMIN" ? "" : "none";
+
+        const searchEl = document.getElementById("companiesSearch");
+        if (searchEl && !searchEl.dataset.bound) {
+          searchEl.dataset.bound = "true";
+          searchEl.addEventListener("input", () =>
+            renderCompaniesAdmin(companiesCache)
+          );
+        }
+
+        if (!window.__companiesResizeBound) {
+          window.__companiesResizeBound = true;
+          window.addEventListener("resize", () =>
+            renderCompaniesAdmin(companiesCache)
+          );
+        }
       }
 
       function parseUsefulLinksTextarea(value) {
@@ -1074,27 +1145,129 @@
           return;
         }
 
+        const query = (document.getElementById("companiesSearch")?.value || "")
+          .trim()
+          .toLowerCase();
+        const filtered = query
+          ? companies.filter((c) => {
+              const haystack = [
+                c.name,
+                c.type,
+                c.segment,
+                c.contactEmail,
+                c.site,
+                c.id,
+              ]
+                .filter(Boolean)
+                .join(" ")
+                .toLowerCase();
+              return haystack.includes(query);
+            })
+          : companies;
+
+        if (filtered.length === 0) {
+          container.innerHTML =
+            '<div class="alert alert-secondary">Nenhum resultado</div>';
+          return;
+        }
+
+        const isNarrow = window.matchMedia("(max-width: 768px)").matches;
+        if (isNarrow) {
+          container.innerHTML = filtered
+            .map((c) => {
+              const email = c.contactEmail || "-";
+              const segment = c.segment || "-";
+              const canEdit = userRole === "AGENCY_ADMIN";
+              const revealed = revealedCompanyIds.has(c.id);
+              const toggleLabel = revealed ? "Esconder ID" : "Exibir ID";
+              const cellId = `company-id-${c.id}`;
+              const idValue = revealed
+                ? `<span id="${cellId}" class="font-monospace small text-break clickable" role="button" tabindex="0" onclick="copyCompanyIdFromCell('${c.id}','${cellId}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();copyCompanyIdFromCell('${c.id}','${cellId}');}">${c.id}</span>`
+                : `<span class="text-muted font-monospace">********</span>`;
+
+              const statusBadgeHtml = c.active
+                ? '<span class="badge text-bg-success">Ativo</span>'
+                : '<span class="badge text-bg-secondary">Inativo</span>';
+
+              return `
+                <div class="card mb-2">
+                  <div class="card-body p-3">
+                    <div class="d-flex justify-content-between align-items-start gap-2">
+                      <div class="flex-grow-1 overflow-hidden">
+                        <div class="fw-semibold text-truncate" title="${(
+                          c.name || ""
+                        ).replace(/"/g, "&quot;")}">${c.name}</div>
+                        <div class="text-muted small">Segmento: <span class="text-truncate d-inline-block" style="max-width: 100%" title="${segment.replace(
+                          /"/g,
+                          "&quot;"
+                        )}">${segment}</span></div>
+                        <div class="text-muted small">Email: <span class="text-truncate d-inline-block" style="max-width: 100%" title="${email.replace(
+                          /"/g,
+                          "&quot;"
+                        )}">${email}</span></div>
+                        <div class="text-muted small">Situação: ${statusBadgeHtml}</div>
+                        <div class="text-muted small mt-1">ID: ${idValue}</div>
+                      </div>
+                    </div>
+
+                    <div class="d-flex gap-2 mt-3">
+                      <button class="btn btn-outline-secondary btn-sm" onclick="toggleCompanyId('${
+                        c.id
+                      }')">${toggleLabel}</button>
+                      ${
+                        canEdit
+                          ? `<button class="btn btn-outline-primary btn-sm" onclick='editCompanyAdmin(${JSON.stringify(
+                              c
+                            ).replace(/'/g, "&#39;")})'>Editar</button>`
+                          : ""
+                      }
+                    </div>
+                  </div>
+                </div>
+              `;
+            })
+            .join("");
+          return;
+        }
+
         let html =
-          '<table class="table table-sm align-middle"><thead><tr><th>Nome</th><th>Tipo</th><th>Ativa</th><th>Email</th><th>Site</th><th>ID</th><th></th></tr></thead><tbody>';
-        companies.forEach((c) => {
+          '<table class="table table-sm align-middle companies-table" style="table-layout: fixed; width: 100%;"><thead><tr><th style="width: 26%;">Nome</th><th style="width: 18%;">Segmento</th><th style="width: 10%;">Situação</th><th style="width: 20%;">Email</th><th style="width: 14%;">ID</th><th style="width: 12%;"></th></tr></thead><tbody>';
+        filtered.forEach((c) => {
           const email = c.contactEmail || "-";
-          const site = c.site || "-";
+          const segment = c.segment || "-";
           const canEdit = userRole === "AGENCY_ADMIN";
+          const revealed = revealedCompanyIds.has(c.id);
+          const toggleLabel = revealed ? "Esconder ID" : "Exibir ID";
+          const cellId = `company-id-${c.id}`;
+          const idCell = revealed
+            ? `<span id="${cellId}" class="font-monospace small px-2 py-1 rounded clickable text-truncate" style="display:inline-block; max-width: 100%;" title="${c.id}" role="button" tabindex="0" onclick="copyCompanyIdFromCell('${c.id}','${cellId}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();copyCompanyIdFromCell('${c.id}','${cellId}');}">${c.id}</span>`
+            : `<span class="text-muted font-monospace">********</span>`;
           html += `<tr>
-            <td>${c.name}</td>
-            <td><span class="badge text-bg-light">${c.type}</span></td>
-            <td>${c.active ? "Sim" : "Não"}</td>
-            <td>${email}</td>
-            <td>${site}</td>
-            <td><code>${c.id}</code></td>
-            <td class="text-end">
-              <div class="btn-group btn-group-sm">
-                <button class="btn btn-outline-secondary" onclick="copyText('${
+            <td style="min-width: 0;"><div class="text-truncate w-100" title="${(
+              c.name || ""
+            ).replace(/"/g, "&quot;")}">${c.name}</div></td>
+            <td style="min-width: 0;"><div class="text-truncate w-100" title="${segment.replace(
+              /"/g,
+              "&quot;"
+            )}">${segment}</div></td>
+            <td>${
+              c.active
+                ? '<span class="badge text-bg-success">Ativo</span>'
+                : '<span class="badge text-bg-secondary">Inativo</span>'
+            }</td>
+            <td style="min-width: 0;"><div class="text-truncate w-100" title="${email.replace(
+              /"/g,
+              "&quot;"
+            )}">${email}</div></td>
+            <td>${idCell}</td>
+            <td class="text-end" style="white-space: normal; min-width: 0;">
+              <div class="d-flex flex-wrap gap-2 justify-content-end" style="min-width: 0;">
+                <button class="btn btn-outline-secondary btn-sm" onclick="toggleCompanyId('${
                   c.id
-                }')">Copiar ID</button>
+                }')">${toggleLabel}</button>
                 ${
                   canEdit
-                    ? `<button class="btn btn-outline-primary" onclick='editCompanyAdmin(${JSON.stringify(
+                    ? `<button class="btn btn-outline-primary btn-sm" onclick='editCompanyAdmin(${JSON.stringify(
                         c
                       ).replace(/'/g, "&#39;")})'>Editar</button>`
                     : ""
@@ -1126,7 +1299,8 @@
               data.message || data.error || "Erro ao listar empresas"
             );
           }
-          renderCompaniesAdmin(data);
+          companiesCache = Array.isArray(data) ? data : [];
+          renderCompaniesAdmin(companiesCache);
         } catch (e) {
           if (container)
             container.innerHTML = `<div class="alert alert-danger">${e.message}</div>`;
@@ -1148,7 +1322,8 @@
               data.message || data.error || "Erro ao listar empresas"
             );
           }
-          renderCompaniesAdmin(data);
+          companiesCache = Array.isArray(data) ? data : [];
+          renderCompaniesAdmin(companiesCache);
         } catch (e) {
           if (container)
             container.innerHTML = `<div class="alert alert-danger">${e.message}</div>`;
@@ -1213,8 +1388,11 @@
         const active = document.getElementById("companyActive").checked;
 
         try {
-          if (!name || !type) {
-            return showToast("Nome e tipo são obrigatórios", "danger");
+          if (!name || !type || !segment || !contactEmail) {
+            return showToast(
+              "Nome, tipo, segmento e email de contato são obrigatórios",
+              "danger"
+            );
           }
 
           if (!id) {
@@ -1224,8 +1402,8 @@
               body: JSON.stringify({
                 name,
                 type,
-                segment: segment || null,
-                contactEmail: contactEmail || null,
+                segment,
+                contactEmail,
                 site: site || null,
                 usefulLinks: usefulLinks,
               }),
@@ -1249,8 +1427,8 @@
               name,
               type,
               active,
-              segment: segment || "",
-              contactEmail: contactEmail || "",
+              segment,
+              contactEmail,
               site: site || "",
               usefulLinks: usefulLinks,
             }),

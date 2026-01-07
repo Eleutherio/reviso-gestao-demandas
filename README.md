@@ -25,10 +25,16 @@ Centraliza pedidos (peças, campanhas, landing pages etc.), controla status, pra
 
 ## Endpoints principais
 
-- `POST /clients` – cria cliente
-- `GET /clients` – lista clientes
-- `POST /requests` – cria demanda (enums alinhados aos tipos do PostgreSQL)
-- `GET /requests/{id}` – consulta demanda
+- Auth
+  - `POST /auth/login` – login e retorno do JWT
+- Briefings (cliente)
+  - `POST /briefings` – cria briefing (payload: `title`, `description`)
+  - `GET /briefings/mine` – lista briefings do cliente logado
+- Demandas
+  - `POST /requests` – cria demanda
+  - `GET /requests` – lista demandas (agência)
+  - `GET /requests/mine` – lista demandas do cliente logado
+  - `GET /requests/{id}/events?onlyVisibleToClient=true` – eventos visíveis ao cliente
 
 ## Arquitetura e Foundation
 
@@ -46,7 +52,12 @@ Essa abordagem "foundation-first" facilita evolução incremental sem quebrar mi
 
 ## Interface web
 
-Uma página de testes estática em [src/main/resources/static/index.html](src/main/resources/static/index.html) para criar e consultar clientes/requests.
+As páginas estáticas ficam em [src/main/resources/static](src/main/resources/static).
+
+- Agência/admin: `http://localhost:8080/` (aponta para `index.html`)
+- Portal do Cliente (CLIENT_USER): `http://localhost:8080/client-portal.html`
+
+Observação: no Portal do Cliente, os campos extras (Tipo, Prioridade e Vencimento) são anexados ao texto da descrição do briefing para manter compatibilidade com a API atual do backend.
 
 ## Monitoramento
 

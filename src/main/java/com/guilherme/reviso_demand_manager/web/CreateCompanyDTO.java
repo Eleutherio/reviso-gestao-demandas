@@ -1,6 +1,7 @@
 package com.guilherme.reviso_demand_manager.web;
 
 import com.guilherme.reviso_demand_manager.domain.CompanyType;
+import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 
@@ -13,7 +14,11 @@ public record CreateCompanyDTO(
     @NotNull(message = "Tipo é obrigatório")
     CompanyType type,
 
+    @NotBlank(message = "Segmento é obrigatório")
     String segment,
+
+    @NotBlank(message = "Email de contato é obrigatório")
+    @Email(message = "Email de contato inválido")
     String contactEmail,
     String site,
     List<String> usefulLinks

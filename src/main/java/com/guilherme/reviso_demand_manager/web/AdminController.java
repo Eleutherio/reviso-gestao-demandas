@@ -34,7 +34,7 @@ public class AdminController {
     }
 
     @PatchMapping("/companies/{id}")
-    public ResponseEntity<CompanyDTO> updateCompany(@PathVariable UUID id, @RequestBody UpdateCompanyDTO dto) {
+    public ResponseEntity<CompanyDTO> updateCompany(@PathVariable UUID id, @Valid @RequestBody UpdateCompanyDTO dto) {
         CompanyDTO updated = companyService.updateCompany(id, dto);
         return ResponseEntity.ok(updated);
     }
