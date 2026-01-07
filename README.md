@@ -15,8 +15,8 @@ Centraliza pedidos (peças, campanhas, landing pages etc.), controla status, pra
 - Java 21, Spring Boot 4.0.1 (Web MVC, Data JPA, Validation, Actuator)
 - PostgreSQL 16 + Flyway para migrations
 - Maven para build
-- HTML/CSS/JS estático em `src/main/resources/static` (legado)
-- Angular (core inicial) em `frontend/` (em migração)
+- Angular em `frontend/` (frontend oficial)
+- UI legado (HTML/JS) preservado em `src/main/resources/legacy-static` (não é servido pela API)
 
 ## Requisitos
 
@@ -53,10 +53,22 @@ Essa abordagem "foundation-first" facilita evolução incremental sem quebrar mi
 
 ## Interface web
 
-As páginas estáticas ficam em [src/main/resources/static](src/main/resources/static).
+- Frontend (Angular via Nginx): `http://localhost:4200`
+- Backend (API): `http://localhost:8080`
+  - Observação: `GET /` no backend redireciona para o frontend.
 
-- Agência/admin: `http://localhost:8080/` (aponta para `index.html`)
-- Portal do Cliente (CLIENT_USER): `http://localhost:8080/client-portal.html`
+## Docker Compose (backend + frontend desacoplado)
+
+Subir tudo (Postgres + API + Angular via Nginx):
+
+```bash
+docker compose up --build
+```
+
+- Backend (API + UI legado): `http://localhost:8080`
+- Frontend Angular (Nginx): `http://localhost:4200`
+
+Para ajustar o redirect do backend `/`, defina `FRONTEND_BASE_URL` no compose/env (padrão: `http://localhost:4200`).
 
 ## Frontend Angular (Core)
 
