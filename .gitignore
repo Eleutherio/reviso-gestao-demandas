@@ -171,6 +171,7 @@ frontend/.angular/cache/
 !**/src/test/**
 hs_err_pid*
 replay_pid*
+AGENTS.MD
 
 # Spring Boot
 HELP.md

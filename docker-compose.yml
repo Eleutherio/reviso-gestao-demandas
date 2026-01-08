@@ -19,10 +19,12 @@ services:
       - reviso-network
 
   backend:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
+    image: maven:3.9-eclipse-temurin-21-alpine
     container_name: reviso-backend
+    working_dir: /app
+    volumes:
+      - ./backend:/app
+      - reviso_m2_cache:/root/.m2
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${DB_NAME:-reviso}
       SPRING_DATASOURCE_USERNAME: ${DB_USER:-reviso}
@@ -37,23 +39,29 @@ services:
         condition: service_healthy
     networks:
       - reviso-network
+    command: mvn -B -ntp spring-boot:run
     restart: unless-stopped
 
   frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
+    image: node:20-alpine
     container_name: reviso-frontend
+    working_dir: /app
+    volumes:
+      - ./frontend:/app
+      - reviso_node_modules:/app/node_modules
     depends_on:
       - backend
     ports:
-      - "${FRONTEND_PORT:-4200}:80"
+      - "${FRONTEND_PORT:-4200}:4200"
     networks:
       - reviso-network
+    command: sh -c "npm install && npm start -- --host 0.0.0.0 --proxy-config proxy.docker.conf.json --poll=2000"
     restart: unless-stopped
 
 volumes:
   reviso_pgdata:
+  reviso_m2_cache:
+  reviso_node_modules:
 
 networks:
   reviso-network:

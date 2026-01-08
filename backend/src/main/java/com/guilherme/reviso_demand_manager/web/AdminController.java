@@ -49,4 +49,16 @@ public class AdminController {
     public ResponseEntity<List<UserDTO>> listUsers() {
         return ResponseEntity.ok(userService.listAllUsers());
     }
+
+    @PatchMapping("/users/{id}")
+    public ResponseEntity<UserDTO> updateUser(@PathVariable UUID id, @Valid @RequestBody UpdateUserDTO dto) {
+        UserDTO updated = userService.updateUser(id, dto);
+        return ResponseEntity.ok(updated);
+    }
+
+    @DeleteMapping("/users/{id}")
+    public ResponseEntity<Void> deleteUser(@PathVariable UUID id) {
+        userService.deleteUser(id);
+        return ResponseEntity.noContent().build();
+    }
 }

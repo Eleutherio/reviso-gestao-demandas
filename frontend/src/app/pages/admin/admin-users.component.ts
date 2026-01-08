@@ -2,9 +2,7 @@ import { Component } from '@angular/core';
 import { CommonModule, DatePipe } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { catchError, firstValueFrom, map, of, startWith, Subject, switchMap } from 'rxjs';
-import { AuthService } from '../../core/auth.service';
-import { AdminUsersApi } from '../../api/admin-users.api';
-import { CreateUserDto } from '../../api/admin-users.api';
+import { AdminUsersApi, CreateUserDto, UpdateUserDto } from '../../api/admin-users.api';
 import { UserDto, UserRole } from '../../api/user';
 
 @Component({
@@ -12,13 +10,8 @@ import { UserDto, UserRole } from '../../api/user';
   standalone: true,
   imports: [CommonModule, DatePipe],
   template: `
-    <h2>Usuários</h2>
-    <p>
-      Role atual: <strong>{{ role }}</strong>
-    </p>
-
     <div style="padding: 12px 0;">
-      <h3>Criar usuário</h3>
+      <h3>{{ editingId ? 'Editar usuario' : 'Criar usuario' }}</h3>
 
       <form (submit)="onSubmit($event)" style="display: grid; gap: 8px; max-width: 720px;">
         <label style="display: grid; gap: 4px;">
@@ -42,6 +35,7 @@ import { UserDto, UserRole } from '../../api/user';
           />
         </label>
 
+        @if (!editingId) {
         <label style="display: grid; gap: 4px;">
           Senha
           <input
@@ -52,23 +46,38 @@ import { UserDto, UserRole } from '../../api/user';
             (input)="form.password = getValue($event)"
           />
         </label>
+        }
 
         <label style="display: grid; gap: 4px;">
-          Role
+          Função
           <select
             name="role"
             required
             [value]="form.role"
             (change)="form.role = getUserRole($event)"
           >
-            <option value="AGENCY_ADMIN">AGENCY_ADMIN</option>
-            <option value="AGENCY_USER">AGENCY_USER</option>
-            <option value="CLIENT_USER">CLIENT_USER</option>
+            <option value="AGENCY_ADMIN">{{ roleLabels.AGENCY_ADMIN }}</option>
+            <option value="AGENCY_USER">{{ roleLabels.AGENCY_USER }}</option>
+            <option value="CLIENT_USER">{{ roleLabels.CLIENT_USER }}</option>
           </select>
         </label>
 
+        @if (editingId) {
         <label style="display: grid; gap: 4px;">
-          CompanyId (obrigatório para CLIENT_USER)
+          Ativo
+          <select
+            name="active"
+            [value]="form.activeStr"
+            (change)="form.activeStr = getBoolStr($event)"
+          >
+            <option value="true">Sim</option>
+            <option value="false">Não</option>
+          </select>
+        </label>
+        }
+
+        <label style="display: grid; gap: 4px;">
+          ID da empresa (obrigatório para referenciar Cliente)
           <input
             name="companyId"
             placeholder="UUID da empresa"
@@ -78,8 +87,10 @@ import { UserDto, UserRole } from '../../api/user';
         </label>
 
         <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
-          <button type="submit">Criar</button>
-          @if (formError) {
+          <button type="submit">{{ editingId ? 'Salvar' : 'Criar' }}</button>
+          @if (editingId) {
+          <button type="button" (click)="cancelEdit()">Cancelar</button>
+          } @if (formError) {
           <span style="color: inherit;">{{ formError }}</span>
           }
         </div>
@@ -95,27 +106,44 @@ import { UserDto, UserRole } from '../../api/user';
       Total: <strong>{{ vm.users.length }}</strong>
     </p>
 
+    <div style="padding: 8px 0; max-width: 420px;">
+      <label style="display: grid; gap: 4px; min-width: 260px;">
+        Buscar usuarios
+        <input
+          name="search"
+          placeholder="Nome, email, função ou cliente ID"
+          [value]="searchTerm"
+          (input)="searchTerm = getValue($event)"
+        />
+      </label>
+    </div>
+
     <div style="overflow-x: auto;">
       <table style="width: 100%; border-collapse: collapse;">
         <thead>
           <tr>
             <th style="text-align: left; padding: 8px;">Nome</th>
             <th style="text-align: left; padding: 8px;">Email</th>
-            <th style="text-align: left; padding: 8px;">Role</th>
+            <th style="text-align: left; padding: 8px;">Função</th>
             <th style="text-align: left; padding: 8px;">Ativo</th>
-            <th style="text-align: left; padding: 8px;">Company</th>
+            <th style="text-align: left; padding: 8px;">Cliente ID</th>
             <th style="text-align: left; padding: 8px;">Criado em</th>
+            <th style="text-align: left; padding: 8px;"></th>
           </tr>
         </thead>
         <tbody>
-          @for (u of vm.users; track u.id) {
+          @for (u of getFilteredUsers(vm.users); track u.id) {
           <tr>
             <td style="padding: 8px;">{{ u.fullName }}</td>
             <td style="padding: 8px;">{{ u.email }}</td>
-            <td style="padding: 8px;">{{ u.role }}</td>
+            <td style="padding: 8px;">{{ roleLabels[u.role] ?? u.role }}</td>
             <td style="padding: 8px;">{{ u.active ? 'Sim' : 'Não' }}</td>
             <td style="padding: 8px;">{{ u.companyId ?? '-' }}</td>
             <td style="padding: 8px;">{{ u.createdAt | date : 'dd/MM/yyyy HH:mm' }}</td>
+            <td style="padding: 8px; display: flex; gap: 8px; flex-wrap: wrap;">
+              <button type="button" (click)="startEdit(u)">Editar</button>
+              <button type="button" (click)="onDelete(u)">Remover</button>
+            </td>
           </tr>
           }
         </tbody>
@@ -125,8 +153,14 @@ import { UserDto, UserRole } from '../../api/user';
   `,
 })
 export class AdminUsersComponent {
-  readonly role;
   readonly vm$;
+  readonly roleLabels: Record<UserRole, string> = {
+    AGENCY_ADMIN: 'Administrador',
+    AGENCY_USER: 'Usuario',
+    CLIENT_USER: 'Cliente',
+  };
+
+  editingId: string | null = null;
 
   form: {
     fullName: string;
@@ -134,21 +168,22 @@ export class AdminUsersComponent {
     password: string;
     role: UserRole;
     companyIdText: string;
+    activeStr: 'true' | 'false';
   } = {
     fullName: '',
     email: '',
     password: '',
     role: 'AGENCY_USER',
     companyIdText: '',
+    activeStr: 'true',
   };
 
   formError: string | null = null;
+  searchTerm = '';
 
   private readonly refresh$ = new Subject<void>();
 
-  constructor(private readonly auth: AuthService, private readonly api: AdminUsersApi) {
-    this.role = this.auth.getRole();
-
+  constructor(private readonly api: AdminUsersApi) {
     this.vm$ = this.refresh$.pipe(
       startWith(undefined),
       switchMap(() => this.api.listUsers()),
@@ -190,6 +225,47 @@ export class AdminUsersComponent {
     return target.value as UserRole;
   }
 
+  getBoolStr(ev: Event): 'true' | 'false' {
+    const target = ev.target as HTMLSelectElement;
+    return target.value === 'true' ? 'true' : 'false';
+  }
+
+  getFilteredUsers(users: UserDto[]): UserDto[] {
+    const term = this.searchTerm.trim().toLowerCase();
+
+    return users.filter((user) => {
+      const companyId = user.companyId ?? '';
+      const roleLabel = this.roleLabels[user.role] ?? user.role;
+      const matchesSearch =
+        !term ||
+        user.fullName.toLowerCase().includes(term) ||
+        user.email.toLowerCase().includes(term) ||
+        user.role.toLowerCase().includes(term) ||
+        roleLabel.toLowerCase().includes(term) ||
+        companyId.toLowerCase().includes(term);
+
+      return matchesSearch;
+    });
+  }
+
+
+  startEdit(u: UserDto): void {
+    this.formError = null;
+    this.editingId = u.id;
+    this.form.fullName = u.fullName;
+    this.form.email = u.email;
+    this.form.password = '';
+    this.form.role = u.role;
+    this.form.companyIdText = u.companyId ?? '';
+    this.form.activeStr = u.active ? 'true' : 'false';
+  }
+
+  cancelEdit(): void {
+    this.formError = null;
+    this.editingId = null;
+    this.resetForm();
+  }
+
   private resetForm(): void {
     this.form = {
       fullName: '',
@@ -197,6 +273,7 @@ export class AdminUsersComponent {
       password: '',
       role: 'AGENCY_USER',
       companyIdText: '',
+      activeStr: 'true',
     };
   }
 
@@ -210,26 +287,65 @@ export class AdminUsersComponent {
       return;
     }
 
-    const dto: CreateUserDto = {
+    const base = {
       fullName: this.form.fullName.trim(),
       email: this.form.email.trim(),
-      password: this.form.password,
       role: this.form.role,
       companyId,
     };
 
     try {
+      if (this.editingId) {
+        const dto: UpdateUserDto = {
+          ...base,
+          active: this.form.activeStr === 'true',
+        };
+        await firstValueFrom(this.api.updateUser(this.editingId, dto));
+        this.cancelEdit();
+        this.refresh$.next();
+        return;
+      }
+
+      const dto: CreateUserDto = {
+        ...base,
+        password: this.form.password,
+      };
       await firstValueFrom(this.api.createUser(dto));
       this.resetForm();
       this.refresh$.next();
     } catch (err: unknown) {
       if (err instanceof HttpErrorResponse) {
         this.formError = `Erro HTTP ${err.status}: ${
-          err.error?.message ?? err.statusText ?? 'Falha ao criar'
+          err.error?.message ?? err.statusText ?? 'Falha ao salvar'
         }`;
         return;
       }
-      this.formError = err instanceof Error ? err.message : 'Falha inesperada ao criar usuário';
+      this.formError = err instanceof Error ? err.message : 'Falha inesperada ao salvar usuario';
+    }
+  }
+
+  async onDelete(u: UserDto): Promise<void> {
+    const message = `Remover usuario ${u.fullName}?`;
+    if (!confirm(message)) {
+      return;
+    }
+
+    this.formError = null;
+
+    try {
+      await firstValueFrom(this.api.deleteUser(u.id));
+      if (this.editingId === u.id) {
+        this.cancelEdit();
+      }
+      this.refresh$.next();
+    } catch (err: unknown) {
+      if (err instanceof HttpErrorResponse) {
+        this.formError = `Erro HTTP ${err.status}: ${
+          err.error?.message ?? err.statusText ?? 'Falha ao remover'
+        }`;
+        return;
+      }
+      this.formError = err instanceof Error ? err.message : 'Falha inesperada ao remover usuario';
     }
   }
 }
