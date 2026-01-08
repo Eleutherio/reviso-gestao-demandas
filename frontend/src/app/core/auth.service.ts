@@ -43,7 +43,11 @@ export class AuthService {
     const exp = payload?.exp;
     if (typeof exp !== 'number') return true;
     const nowSec = Math.floor(Date.now() / 1000);
-    return exp > nowSec;
+    if (exp <= nowSec) {
+      this.logout();
+      return false;
+    }
+    return true;
   }
 
   decodeJwt(token?: string | null): JwtPayload | null {
