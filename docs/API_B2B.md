@@ -42,6 +42,28 @@
 }
 ```
 
+**POST /auth/login-client**
+
+Login para portal do cliente (companyCode + email + senha):
+
+```json
+{
+  "companyCode": "CABC-CL-XXX",
+  "email": "maria@clienteabc.com",
+  "password": "senha123"
+}
+```
+
+**POST /auth/recover-company-code**
+
+Recupera companyCode por email (envio por provedor transacional):
+
+```json
+{
+  "email": "maria@clienteabc.com"
+}
+```
+
 ---
 
 ### Etapa 2 - Companies + Users (Admin) ✅

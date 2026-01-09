@@ -71,6 +71,18 @@ docker compose up -d --build
 
 Para ajustar o redirect do backend `/`, defina `FRONTEND_BASE_URL` no compose/env (padrão: `http://localhost:4200`).
 
+## Email transacional (Resend)
+
+Para enviar emails em producao (ex.: recovery de codigo), configure:
+
+- `RESEND_API_KEY`
+- `RESEND_FROM`
+
+Opcionalmente:
+
+- `RESEND_BASE_URL` (padrao: https://api.resend.com)
+- `RESEND_TIMEOUT_SECONDS`
+
 ## Frontend Angular (Core)
 
 O projeto Angular fica em [frontend](frontend) e consome o backend via proxy em `/api/*`.
