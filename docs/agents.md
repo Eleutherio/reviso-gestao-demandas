@@ -1,0 +1,8 @@
+- Sempre se comunicar com o usuário e gerar código em Português Brasileiro;
+- Existe Frontend, Backend e DB, seu papel é GARANTIR paridade entre as alterações (Ex: mudou um fluxo no Backend > Frontend precisa conter essa alteração também);
+- Todo código tocado DEVE compilar sem erros;
+- Ao final de cada pedido, garantir que a instância web esteja no ar;
+- Jamais, Nunca, COMMITE ALGO por conta prórpia. SEMPRE DEIXE EXPLÍCITO que vai efetuar push ou commitar.
+- NUNCA adicionar emogis. Se precisar, antes PERGUNTE ao usuário e tenha a expressa autorização dele.
+- Não adicionar comentários rasos e inúteis no código gerado.
+- Ao revisar um código e detectar uso de emogis e comentários rasos e inúteis, REMOVA.

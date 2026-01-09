@@ -34,12 +34,3 @@
     </main>
   </div>
 </div>
-
-<div class="shell__idle-banner" *ngIf="bannerVisivel" role="status" aria-live="polite">
-  <div class="shell__idle-text">
-    Sessão expira em {{ bannerContagem }} por inatividade.
-  </div>
-  <button class="shell__idle-action" type="button" (click)="continuarSessao()">
-    Continuar sessão
-  </button>
-</div>

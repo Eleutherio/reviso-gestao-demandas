@@ -114,7 +114,6 @@ Temporary Items
 !.env.example
 *.env
 
-
 # Credenciais e certificados
 *.key
 *.pem
@@ -172,7 +171,6 @@ frontend/.angular/cache/
 !**/src/test/**
 hs_err_pid*
 replay_pid*
-AGENTS.MD
 
 # Spring Boot
 HELP.md

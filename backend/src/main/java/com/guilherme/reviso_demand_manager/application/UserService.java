@@ -4,8 +4,6 @@ import com.guilherme.reviso_demand_manager.domain.User;
 import com.guilherme.reviso_demand_manager.domain.UserRole;
 import com.guilherme.reviso_demand_manager.infra.UserRepository;
 import com.guilherme.reviso_demand_manager.web.CreateUserDTO;
-import com.guilherme.reviso_demand_manager.web.ResourceNotFoundException;
-import com.guilherme.reviso_demand_manager.web.UpdateUserDTO;
 import com.guilherme.reviso_demand_manager.web.UserDTO;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -57,42 +55,6 @@ public class UserService {
         return userRepository.findAll().stream()
                 .map(this::toDTO)
                 .toList();
-    }
-
-    @Transactional
-    public UserDTO updateUser(UUID id, UpdateUserDTO dto) {
-        User user = userRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Usuario nao encontrado"));
-
-        if (!user.getEmail().equals(dto.email())) {
-            userRepository.findByEmail(dto.email())
-                    .filter(existing -> !existing.getId().equals(id))
-                    .ifPresent(existing -> {
-                        throw new IllegalArgumentException("Email ja esta em uso");
-                    });
-        }
-
-        if (dto.role() == UserRole.CLIENT_USER && dto.companyId() == null) {
-            throw new IllegalArgumentException("CLIENT_USER deve ter companyId");
-        }
-
-        user.setFullName(dto.fullName());
-        user.setEmail(dto.email());
-        user.setRole(dto.role());
-        user.setCompanyId(dto.companyId());
-        if (dto.active() != null) {
-            user.setActive(dto.active());
-        }
-
-        User saved = userRepository.save(user);
-        return toDTO(saved);
-    }
-
-    @Transactional
-    public void deleteUser(UUID id) {
-        User user = userRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Usuario nao encontrado"));
-        userRepository.delete(user);
     }
 
     private UserDTO toDTO(User user) {

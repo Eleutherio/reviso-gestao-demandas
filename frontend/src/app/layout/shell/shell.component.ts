@@ -1,4 +1,4 @@
-import { Component, OnDestroy, OnInit } from '@angular/core';
+import { Component } from '@angular/core';
 import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { NgFor, NgIf } from '@angular/common';
 import { AuthService } from '../../core/auth.service';
@@ -16,20 +16,9 @@ type NavItem = {
   templateUrl: './shell.component.html',
   styleUrl: './shell.component.scss',
 })
-export class ShellComponent implements OnInit, OnDestroy {
+export class ShellComponent {
   readonly role: UserRole | null;
   readonly companyId: string | null;
-  bannerVisivel = false;
-  bannerContagem = '';
-
-  private ultimaAtividadeEm = Date.now();
-  private intervaloId: number | null = null;
-  private ultimoSinalAtividade = 0;
-  private readonly inatividadeMs = 15 * 60 * 1000;
-  private readonly logoutMs = 20 * 60 * 1000;
-  private readonly throttleAtividadeMs = 1000;
-  private readonly eventosAtividade = ['mousemove', 'keydown', 'scroll', 'touchstart', 'wheel'];
-  private readonly handleAtividade = () => this.registrarAtividade(false);
 
   private readonly items: NavItem[] = [
     { label: 'Meus Briefings', path: '/client/briefings', roles: ['CLIENT_USER'] },
@@ -75,90 +64,6 @@ export class ShellComponent implements OnInit, OnDestroy {
 
   logout(): void {
     this.auth.logout();
-    this.router.navigateByUrl('/login');
-  }
-
-  ngOnInit(): void {
-    this.ultimaAtividadeEm = Date.now();
-    this.vincularEventosAtividade();
-    this.iniciarMonitorInatividade();
-  }
-
-  ngOnDestroy(): void {
-    this.pararMonitorInatividade();
-    this.removerEventosAtividade();
-  }
-
-  continuarSessao(): void {
-    this.registrarAtividade(true);
-  }
-
-  private iniciarMonitorInatividade(): void {
-    this.intervaloId = window.setInterval(() => this.atualizarInatividade(), 1000);
-    this.atualizarInatividade();
-  }
-
-  private pararMonitorInatividade(): void {
-    if (this.intervaloId !== null) {
-      window.clearInterval(this.intervaloId);
-      this.intervaloId = null;
-    }
-  }
-
-  private vincularEventosAtividade(): void {
-    this.eventosAtividade.forEach((evento) =>
-      window.addEventListener(evento, this.handleAtividade, { passive: true })
-    );
-  }
-
-  private removerEventosAtividade(): void {
-    this.eventosAtividade.forEach((evento) =>
-      window.removeEventListener(evento, this.handleAtividade)
-    );
-  }
-
-  private registrarAtividade(force: boolean): void {
-    const agora = Date.now();
-    if (!force && agora - this.ultimoSinalAtividade < this.throttleAtividadeMs) {
-      return;
-    }
-    this.ultimoSinalAtividade = agora;
-    this.ultimaAtividadeEm = agora;
-    if (this.bannerVisivel) {
-      this.bannerVisivel = false;
-    }
-  }
-
-  private atualizarInatividade(): void {
-    const agora = Date.now();
-    const inatividade = agora - this.ultimaAtividadeEm;
-
-    if (inatividade >= this.logoutMs) {
-      this.executarLogout();
-      return;
-    }
-
-    if (inatividade >= this.inatividadeMs) {
-      const restanteMs = this.logoutMs - inatividade;
-      this.bannerVisivel = true;
-      this.bannerContagem = this.formatarRestante(restanteMs);
-      return;
-    }
-
-    this.bannerVisivel = false;
-  }
-
-  private formatarRestante(ms: number): string {
-    const totalSegundos = Math.max(0, Math.ceil(ms / 1000));
-    const minutos = Math.floor(totalSegundos / 60);
-    const segundos = totalSegundos % 60;
-    return `${minutos}:${segundos.toString().padStart(2, '0')}`;
-  }
-
-  private executarLogout(): void {
-    this.auth.logout();
-    this.pararMonitorInatividade();
-    this.removerEventosAtividade();
     this.router.navigateByUrl('/login');
   }
 }
