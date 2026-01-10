@@ -64,6 +64,28 @@ Recupera companyCode por email (envio por provedor transacional):
 }
 ```
 
+**POST /auth/recover-agency-password**
+
+Envia token de recuperacao de senha para usuarios de agencia:
+
+```json
+{
+  "email": "usuario@agencia.com"
+}
+```
+
+**POST /auth/recover-agency-password/confirm**
+
+Confirma token e define nova senha:
+
+```json
+{
+  "email": "usuario@agencia.com",
+  "token": "123456",
+  "newPassword": "nova123"
+}
+```
+
 ---
 
 ### Etapa 2 - Companies + Users (Admin) ✅
