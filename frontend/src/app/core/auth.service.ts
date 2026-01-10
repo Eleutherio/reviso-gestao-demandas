@@ -45,6 +45,22 @@ export class AuthService {
     return this.http.post<{ message?: string }>('/api/auth/recover-company-code', { email });
   }
 
+  recoverAgencyPassword(email: string): Observable<{ message?: string }> {
+    return this.http.post<{ message?: string }>('/api/auth/recover-agency-password', { email });
+  }
+
+  confirmAgencyPassword(
+    email: string,
+    token: string,
+    newPassword: string
+  ): Observable<{ message?: string }> {
+    return this.http.post<{ message?: string }>('/api/auth/recover-agency-password/confirm', {
+      email,
+      token,
+      newPassword,
+    });
+  }
+
   logout(): void {
     localStorage.removeItem(this.tokenKey);
   }

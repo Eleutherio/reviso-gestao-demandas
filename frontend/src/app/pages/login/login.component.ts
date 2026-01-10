@@ -21,9 +21,18 @@ export class LoginComponent {
   recoverMessage: string | null = null;
   recoverError: string | null = null;
   recovering = false;
+  agencyRecoverVisible = false;
+  agencyRecoverMessage: string | null = null;
+  agencyRecoverError: string | null = null;
+  agencyRecovering = false;
+  agencyResetMessage: string | null = null;
+  agencyResetError: string | null = null;
+  agencyResetting = false;
 
   readonly loginForm;
   readonly recoverForm;
+  readonly agencyRecoverForm;
+  readonly agencyResetForm;
 
   constructor(
     private readonly fb: FormBuilder,
@@ -37,6 +46,14 @@ export class LoginComponent {
     });
     this.recoverForm = this.fb.group({
       email: ['', [Validators.required, Validators.email]],
+    });
+    this.agencyRecoverForm = this.fb.group({
+      email: ['', [Validators.required, Validators.email]],
+    });
+    this.agencyResetForm = this.fb.group({
+      email: ['', [Validators.required, Validators.email]],
+      token: ['', [Validators.required]],
+      newPassword: ['', [Validators.required]],
     });
 
     this.applyPortalValidators();
@@ -54,6 +71,13 @@ export class LoginComponent {
     this.recoverError = null;
     this.recoverVisible = false;
     this.recoverForm.reset();
+    this.agencyRecoverMessage = null;
+    this.agencyRecoverError = null;
+    this.agencyRecoverVisible = false;
+    this.agencyResetMessage = null;
+    this.agencyResetError = null;
+    this.agencyRecoverForm.reset();
+    this.agencyResetForm.reset();
     this.applyPortalValidators();
   }
 
@@ -62,6 +86,16 @@ export class LoginComponent {
     this.recoverMessage = null;
     this.recoverError = null;
     this.recoverForm.reset();
+  }
+
+  toggleAgencyRecover(): void {
+    this.agencyRecoverVisible = !this.agencyRecoverVisible;
+    this.agencyRecoverMessage = null;
+    this.agencyRecoverError = null;
+    this.agencyResetMessage = null;
+    this.agencyResetError = null;
+    this.agencyRecoverForm.reset();
+    this.agencyResetForm.reset();
   }
 
   submit(): void {
@@ -192,6 +226,70 @@ export class LoginComponent {
       });
   }
 
+  requestAgencyPasswordToken(): void {
+    this.agencyRecoverMessage = null;
+    this.agencyRecoverError = null;
+
+    if (this.agencyRecoverForm.invalid) {
+      this.agencyRecoverError = this.resolveAgencyRecoverValidationError();
+      this.agencyRecoverForm.markAllAsTouched();
+      return;
+    }
+
+    const email = this.agencyRecoverForm.value.email ?? '';
+    this.agencyRecovering = true;
+    this.agencyRecoverForm.disable();
+    this.auth
+      .recoverAgencyPassword(email)
+      .pipe(
+        finalize(() => {
+          this.agencyRecovering = false;
+          this.agencyRecoverForm.enable();
+        })
+      )
+      .subscribe({
+        next: (res) => {
+          this.agencyRecoverMessage = res?.message ?? 'Se o email estiver ativo, enviaremos um token.';
+        },
+        error: (err: unknown) => {
+          this.agencyRecoverError = this.resolveAgencyRecoverError(err);
+        },
+      });
+  }
+
+  confirmAgencyPasswordToken(): void {
+    this.agencyResetMessage = null;
+    this.agencyResetError = null;
+
+    if (this.agencyResetForm.invalid) {
+      this.agencyResetError = this.resolveAgencyResetValidationError();
+      this.agencyResetForm.markAllAsTouched();
+      return;
+    }
+
+    const email = this.agencyResetForm.value.email ?? '';
+    const token = this.agencyResetForm.value.token ?? '';
+    const newPassword = this.agencyResetForm.value.newPassword ?? '';
+    this.agencyResetting = true;
+    this.agencyResetForm.disable();
+    this.auth
+      .confirmAgencyPassword(email, token, newPassword)
+      .pipe(
+        finalize(() => {
+          this.agencyResetting = false;
+          this.agencyResetForm.enable();
+        })
+      )
+      .subscribe({
+        next: (res) => {
+          this.agencyResetMessage = res?.message ?? 'Senha atualizada com sucesso.';
+        },
+        error: (err: unknown) => {
+          this.agencyResetError = this.resolveAgencyResetError(err);
+        },
+      });
+  }
+
   private extractServerMessage(err: HttpErrorResponse): string | null {
     const payload = err.error as { message?: unknown } | string | null;
     if (!payload) return null;
@@ -251,6 +349,61 @@ export class LoginComponent {
       }
     }
     return 'Nao foi possivel enviar o email. Tente novamente.';
+  }
+
+  private resolveAgencyRecoverValidationError(): string {
+    const emailCtrl = this.agencyRecoverForm.get('email');
+    if (emailCtrl?.hasError('required')) return 'Informe o email da agencia.';
+    if (emailCtrl?.hasError('email')) return 'Informe um email valido.';
+    return 'Preencha o email para continuar.';
+  }
+
+  private resolveAgencyResetValidationError(): string {
+    const emailCtrl = this.agencyResetForm.get('email');
+    const tokenCtrl = this.agencyResetForm.get('token');
+    const passwordCtrl = this.agencyResetForm.get('newPassword');
+    if (emailCtrl?.hasError('required')) return 'Informe o email da agencia.';
+    if (emailCtrl?.hasError('email')) return 'Informe um email valido.';
+    if (tokenCtrl?.hasError('required')) return 'Informe o token enviado.';
+    if (passwordCtrl?.hasError('required')) return 'Informe a nova senha.';
+    return 'Preencha os campos para continuar.';
+  }
+
+  private resolveAgencyRecoverError(err: unknown): string {
+    if (err instanceof HttpErrorResponse) {
+      if (err.status === 0) {
+        return 'Nao foi possivel conectar. Verifique sua internet e tente novamente.';
+      }
+      if (err.status === 429) {
+        return 'Muitas tentativas. Aguarde alguns minutos e tente novamente.';
+      }
+      if (err.status >= 500) {
+        return 'Nao foi possivel enviar o token. Tente novamente mais tarde.';
+      }
+    }
+    return 'Nao foi possivel enviar o token. Tente novamente.';
+  }
+
+  private resolveAgencyResetError(err: unknown): string {
+    if (err instanceof HttpErrorResponse) {
+      const serverMessage = this.extractServerMessage(err);
+      if (serverMessage && serverMessage.toLowerCase().includes('token')) {
+        return 'Token invalido ou expirado.';
+      }
+      if (err.status === 0) {
+        return 'Nao foi possivel conectar. Verifique sua internet e tente novamente.';
+      }
+      if (err.status === 400) {
+        return 'Token invalido ou expirado.';
+      }
+      if (err.status === 429) {
+        return 'Muitas tentativas. Aguarde alguns minutos e tente novamente.';
+      }
+      if (err.status >= 500) {
+        return 'Nao foi possivel atualizar a senha. Tente novamente mais tarde.';
+      }
+    }
+    return 'Nao foi possivel atualizar a senha. Tente novamente.';
   }
 }
 
