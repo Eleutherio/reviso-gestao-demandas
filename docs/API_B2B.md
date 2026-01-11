@@ -42,6 +42,50 @@
 }
 ```
 
+**POST /auth/login-client**
+
+Login para portal do cliente (companyCode + email + senha):
+
+```json
+{
+  "companyCode": "CABC-CL-XXX",
+  "email": "maria@clienteabc.com",
+  "password": "senha123"
+}
+```
+
+**POST /auth/recover-company-code**
+
+Recupera companyCode por email (envio por provedor transacional):
+
+```json
+{
+  "email": "maria@clienteabc.com"
+}
+```
+
+**POST /auth/recover-agency-password**
+
+Envia token de recuperacao de senha para usuarios de agencia:
+
+```json
+{
+  "email": "usuario@agencia.com"
+}
+```
+
+**POST /auth/recover-agency-password/confirm**
+
+Confirma token e define nova senha:
+
+```json
+{
+  "email": "usuario@agencia.com",
+  "token": "123456",
+  "newPassword": "nova123"
+}
+```
+
 ---
 
 ### Etapa 2 - Companies + Users (Admin) ✅

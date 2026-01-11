@@ -28,6 +28,39 @@ export class AuthService {
     );
   }
 
+  loginClient(companyCode: string, email: string, password: string): Observable<void> {
+    return this.http
+      .post<LoginResponse>('/api/auth/login-client', { companyCode, email, password })
+      .pipe(
+        map((res) => res?.token),
+        tap((token) => {
+          if (!token) throw new Error('Token ausente no login');
+          localStorage.setItem(this.tokenKey, token);
+        }),
+        map(() => void 0)
+      );
+  }
+
+  recoverCompanyCode(email: string): Observable<{ message?: string }> {
+    return this.http.post<{ message?: string }>('/api/auth/recover-company-code', { email });
+  }
+
+  recoverAgencyPassword(email: string): Observable<{ message?: string }> {
+    return this.http.post<{ message?: string }>('/api/auth/recover-agency-password', { email });
+  }
+
+  confirmAgencyPassword(
+    email: string,
+    token: string,
+    newPassword: string
+  ): Observable<{ message?: string }> {
+    return this.http.post<{ message?: string }>('/api/auth/recover-agency-password/confirm', {
+      email,
+      token,
+      newPassword,
+    });
+  }
+
   logout(): void {
     localStorage.removeItem(this.tokenKey);
   }
@@ -43,7 +76,11 @@ export class AuthService {
     const exp = payload?.exp;
     if (typeof exp !== 'number') return true;
     const nowSec = Math.floor(Date.now() / 1000);
-    return exp > nowSec;
+    if (exp <= nowSec) {
+      this.logout();
+      return false;
+    }
+    return true;
   }
 
   decodeJwt(token?: string | null): JwtPayload | null {

@@ -11,6 +11,14 @@ export interface CreateUserDto {
   companyId?: string | null;
 }
 
+export interface UpdateUserDto {
+  fullName: string;
+  email: string;
+  role: UserRole;
+  companyId?: string | null;
+  active?: boolean | null;
+}
+
 @Injectable({ providedIn: 'root' })
 export class AdminUsersApi {
   constructor(private readonly http: HttpClient) {}
@@ -21,5 +29,13 @@ export class AdminUsersApi {
 
   createUser(dto: CreateUserDto): Observable<UserDto> {
     return this.http.post<UserDto>('/api/admin/users', dto);
+  }
+
+  updateUser(id: string, dto: UpdateUserDto): Observable<UserDto> {
+    return this.http.patch<UserDto>(`/api/admin/users/${id}`, dto);
+  }
+
+  deleteUser(id: string): Observable<void> {
+    return this.http.delete<void>(`/api/admin/users/${id}`);
   }
 }
