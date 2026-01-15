@@ -2,7 +2,6 @@ import { Component } from '@angular/core';
 import { CommonModule, DatePipe } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { catchError, firstValueFrom, map, of, startWith, Subject, switchMap } from 'rxjs';
-import { AuthService } from '../../core/auth.service';
 import {
   AdminCompaniesApi,
   CreateCompanyDto,
@@ -16,10 +15,6 @@ import { CompanyDto, CompanyType } from '../../api/company';
   imports: [CommonModule, DatePipe],
   template: `
     <h2>Empresas</h2>
-
-    <p>
-      Role atual: <strong>{{ role }}</strong>
-    </p>
 
     <div style="padding: 12px 0;">
       <h3>{{ editingId ? 'Editar empresa' : 'Criar empresa' }}</h3>
@@ -113,6 +108,18 @@ import { CompanyDto, CompanyType } from '../../api/company';
       Total: <strong>{{ vm.companies.length }}</strong>
     </p>
 
+    <div style="padding: 8px 0; max-width: 420px;">
+      <label style="display: grid; gap: 4px; min-width: 260px;">
+        Buscar empresas
+        <input
+          name="search"
+          placeholder="Nome, codigo, tipo ou email"
+          [value]="searchTerm"
+          (input)="searchTerm = getValue($event)"
+        />
+      </label>
+    </div>
+
     <div style="overflow-x: auto;">
       <table style="width: 100%; border-collapse: collapse;">
         <thead>
@@ -124,12 +131,11 @@ import { CompanyDto, CompanyType } from '../../api/company';
             <th style="text-align: left; padding: 8px;">Email</th>
             <th style="text-align: left; padding: 8px;">Codigo</th>
             <th style="text-align: left; padding: 8px;">Criada em</th>
-            <th style="text-align: left; padding: 8px;">ID Empresa</th>
             <th style="text-align: left; padding: 8px;"></th>
           </tr>
         </thead>
         <tbody>
-          @for (c of vm.companies; track c.id) {
+          @for (c of getFilteredCompanies(vm.companies); track c.id) {
           <tr>
             <td style="padding: 8px;">{{ c.name }}</td>
             <td style="padding: 8px;">{{ c.type }}</td>
@@ -138,7 +144,6 @@ import { CompanyDto, CompanyType } from '../../api/company';
             <td style="padding: 8px;">{{ c.contactEmail ?? '-' }}</td>
             <td style="padding: 8px;">{{ c.companyCode ?? '-' }}</td>
             <td style="padding: 8px;">{{ c.createdAt | date : 'dd/MM/yyyy HH:mm' }}</td>
-            <td style="padding: 8px;">{{ c.id }}</td>
             <td style="padding: 8px;">
               <button type="button" (click)="startEdit(c)">Editar</button>
             </td>
@@ -151,8 +156,6 @@ import { CompanyDto, CompanyType } from '../../api/company';
   `,
 })
 export class AdminCompaniesComponent {
-  readonly role;
-
   readonly vm$;
 
   editingId: string | null = null;
@@ -177,11 +180,11 @@ export class AdminCompaniesComponent {
 
   formError: string | null = null;
 
+  searchTerm = '';
+
   private readonly refresh$ = new Subject<void>();
 
-  constructor(private readonly auth: AuthService, private readonly api: AdminCompaniesApi) {
-    this.role = this.auth.getRole();
-
+  constructor(private readonly api: AdminCompaniesApi) {
     this.vm$ = this.refresh$.pipe(
       startWith(undefined),
       switchMap(() => this.api.listCompanies()),
@@ -228,6 +231,29 @@ export class AdminCompaniesComponent {
   getBoolStr(ev: Event): 'true' | 'false' {
     const target = ev.target as HTMLSelectElement;
     return target.value === 'true' ? 'true' : 'false';
+  }
+
+  getFilteredCompanies(companies: CompanyDto[]): CompanyDto[] {
+    const term = this.searchTerm.trim().toLowerCase();
+    if (!term) return companies;
+
+    return companies.filter((company) => {
+      const name = company.name.toLowerCase();
+      const type = company.type.toLowerCase();
+      const segment = (company.segment ?? '').toLowerCase();
+      const email = (company.contactEmail ?? '').toLowerCase();
+      const code = (company.companyCode ?? '').toLowerCase();
+      const site = (company.site ?? '').toLowerCase();
+
+      return (
+        name.includes(term) ||
+        type.includes(term) ||
+        segment.includes(term) ||
+        email.includes(term) ||
+        code.includes(term) ||
+        site.includes(term)
+      );
+    });
   }
 
   startEdit(c: CompanyDto): void {
