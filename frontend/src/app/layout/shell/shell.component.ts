@@ -19,6 +19,7 @@ type NavItem = {
 export class ShellComponent implements OnInit, OnDestroy {
   readonly role: UserRole | null;
   readonly companyId: string | null;
+  readonly displayName: string | null;
   bannerVisivel = false;
   bannerContagem = '';
 
@@ -30,6 +31,11 @@ export class ShellComponent implements OnInit, OnDestroy {
   private readonly throttleAtividadeMs = 1000;
   private readonly eventosAtividade = ['mousemove', 'keydown', 'scroll', 'touchstart', 'wheel'];
   private readonly handleAtividade = () => this.registrarAtividade(false);
+  private readonly roleLabels: Record<UserRole, string> = {
+    AGENCY_ADMIN: 'Administrador',
+    AGENCY_USER: 'colaborador',
+    CLIENT_USER: 'empresa',
+  };
 
   private readonly items: NavItem[] = [
     { label: 'Meus Briefings', path: '/client/briefings', roles: ['CLIENT_USER'] },
@@ -65,12 +71,19 @@ export class ShellComponent implements OnInit, OnDestroy {
   constructor(private readonly auth: AuthService, private readonly router: Router) {
     this.role = this.auth.getRole();
     this.companyId = this.auth.getCompanyId();
+    this.displayName = this.auth.getDisplayName();
   }
 
   get navItems(): NavItem[] {
     const role = this.role;
     if (!role) return [];
     return this.items.filter((it) => it.roles.includes(role));
+  }
+
+  get roleLabel(): string {
+    const role = this.role;
+    if (!role) return '';
+    return this.roleLabels[role] ?? role;
   }
 
   logout(): void {

@@ -2,12 +2,9 @@
   <header class="shell__header">
     <div class="shell__brand">Reviso</div>
 
-    <div class="shell__meta" *ngIf="role as r">
+    <div class="shell__meta" *ngIf="role">
       <div class="shell__meta-line">
-        Role: <strong>{{ r }}</strong>
-      </div>
-      <div class="shell__meta-line" *ngIf="companyId">
-        CID: <span class="mono">{{ companyId }}</span>
+        Ol&aacute;, {{ displayName }}. Voc&ecirc; est&aacute; logado como {{ roleLabel }}.
       </div>
     </div>
 
