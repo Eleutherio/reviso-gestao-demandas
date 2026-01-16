@@ -104,6 +104,14 @@ Exemplo: `POST /api/auth/login` (Angular) → `POST /auth/login` (backend)
 
 Observação: no Portal do Cliente, os campos extras (Tipo, Prioridade e Vencimento) são anexados ao texto da descrição do briefing para manter compatibilidade com a API atual do backend.
 
+### Tailwind CSS
+
+Tailwind CSS is configured in `frontend/` and ready for utility-first styling.
+
+- Config: `frontend/tailwind.config.js` and `frontend/postcss.config.js`
+- Global directives: `frontend/src/styles.scss`
+- After `npm install`, start using Tailwind classes in templates
+
 ## Monitoramento
 
 - Actuator habilitado: `http://localhost:8080/actuator/health`
