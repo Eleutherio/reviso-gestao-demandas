@@ -11,242 +11,395 @@ import { UserDto, UserRole } from '../../api/user';
   selector: 'app-admin-users',
   standalone: true,
   imports: [CommonModule, DatePipe],
+  styleUrls: ['./admin-users.component.scss'],
   template: `
-    <div style="padding: 12px 0;">
-      <h3>{{ editingId ? 'Editar usuário' : 'Criar usuário' }}</h3>
-
-      <form (submit)="onSubmit($event)" style="display: grid; gap: 8px; max-width: 720px;">
-        <label style="display: grid; gap: 4px;">
-          Nome completo
-          <input
-            name="fullName"
-            required
-            [value]="form.fullName"
-            [style.borderColor]="fieldErrors.fullName ? '#c00' : ''"
-            (input)="onTextInput('fullName', $event)"
-          />
-          @if (fieldErrors.fullName) {
-          <small style="color: #c00;">{{ fieldErrors.fullName }}</small>
-          }
-        </label>
-
-        <label style="display: grid; gap: 4px;">
-          Email
-          <input
-            name="email"
-            type="email"
-            required
-            [value]="form.email"
-            [style.borderColor]="fieldErrors.email ? '#c00' : ''"
-            (input)="onTextInput('email', $event)"
-          />
-          @if (fieldErrors.email) {
-          <small style="color: #c00;">{{ fieldErrors.email }}</small>
-          }
-        </label>
-
-        @if (!editingId) {
-        <label style="display: grid; gap: 4px;">
-          Senha
-          <input
-            name="password"
-            [type]="showPassword ? 'text' : 'password'"
-            minlength="8"
-            autocomplete="new-password"
-            required
-            [value]="form.password"
-            [style.borderColor]="fieldErrors.password ? '#c00' : ''"
-            (input)="onTextInput('password', $event)"
-          />
-          @if (fieldErrors.password) {
-          <small style="color: #c00;">{{ fieldErrors.password }}</small>
-          }
-        </label>
-        <div style="display: flex; gap: 12px; align-items: center;">
-          <label style="display: inline-flex; gap: 6px; align-items: center;">
-            <input
-              type="checkbox"
-              [checked]="showPassword"
-              (change)="showPassword = getChecked($event)"
-            />
-            Mostrar senha
-          </label>
-          <small style="color: inherit;">Mínimo 8 caracteres.</small>
+    <section class="users-page">
+      <header class="users-header">
+        <div class="users-title-block">
+          <p class="users-eyebrow">Administração</p>
+          <h2 class="users-title">Usuários</h2>
+          <p class="users-subtitle">
+            Gestão simples de papéis do time criativo ou de acesso das empresas.
+          </p>
         </div>
-        }
+      </header>
 
-        <label style="display: grid; gap: 4px;">
-          Função
-          <select
-            name="role"
-            required
-            [value]="form.role"
-            (change)="onRoleChange($event)"
-          >
-            <option value="AGENCY_ADMIN">{{ roleLabels.AGENCY_ADMIN }}</option>
-            <option value="AGENCY_USER">{{ roleLabels.AGENCY_USER }}</option>
-            <option value="CLIENT_USER">{{ roleLabels.CLIENT_USER }}</option>
-          </select>
-        </label>
+      <div class="users-grid">
+        <section class="users-card users-card--form">
+          <div class="users-card__head">
+            <h3 class="users-card__title">
+              {{ editingId ? 'Editar usuário' : 'Criar novo usuário' }}
+            </h3>
+            <p class="users-muted">Preencha os dados para criar ou atualizar o cadastro.</p>
+          </div>
 
-        @if (editingId) {
-        <label style="display: grid; gap: 4px;">
-          Ativo
-          <select
-            name="active"
-            [value]="form.activeStr"
-            (change)="form.activeStr = getBoolStr($event)"
-          >
-            <option value="true">Sim</option>
-            <option value="false">Não</option>
-          </select>
-        </label>
-        }
-
-        @if (form.role === 'CLIENT_USER') {
-        <label style="display: grid; gap: 4px;">
-          Empresa (código ou UUID)
-          <input
-            name="companyId"
-            list="company-options"
-            placeholder="CABC-CL-XXX"
-            [value]="form.companyIdText"
-            [style.borderColor]="fieldErrors.companyId ? '#c00' : ''"
-            (input)="onTextInput('companyId', $event)"
-          />
-          @if (fieldErrors.companyId) {
-          <small style="color: #c00;">{{ fieldErrors.companyId }}</small>
-          } @else {
-          <small style="color: inherit;">Ex.: CABC-CL-XXX ou UUID.</small>
-          }
-        </label>
-
-        <datalist id="company-options">
-          @for (c of clientCompanies; track c.id) {
-          <option [value]="c.companyCode">{{ c.name }} ({{ c.companyCode }})</option>
-          }
-        </datalist>
-
-        @if (clientCompanies.length === 0) {
-        <small style="color: inherit;">
-          Cadastre uma empresa cliente para usar o código.
-        </small>
-        }
-        }
-
-        <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
-          <button type="submit">{{ editingId ? 'Salvar' : 'Criar' }}</button>
-          @if (editingId) {
-          <button type="button" (click)="cancelEdit()">Cancelar</button>
-          } @if (formError) {
-          <span style="color: inherit;">{{ formError }}</span>
-          }
-        </div>
-      </form>
-    </div>
-
-    @if (vm$ | async; as vm) { @if (vm.status === 'loading') {
-    <p>Carregando...</p>
-    } @else if (vm.status === 'error') {
-    <p style="color: inherit;">Erro ao carregar usuários: {{ vm.message }}</p>
-    } @else {
-    <p>
-      Total: <strong>{{ vm.users.length }}</strong>
-    </p>
-
-    <div
-      style="padding: 8px 0; display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));"
-    >
-      <label style="display: grid; gap: 4px;">
-        Buscar usuários
-        <input
-          name="search"
-          placeholder="Nome, email, empresa ou código"
-          [value]="searchTerm"
-          (input)="searchTerm = getValue($event)"
-        />
-      </label>
-
-      <label style="display: grid; gap: 4px;">
-        Função
-        <select
-          name="filterRole"
-          [value]="filterRole"
-          (change)="filterRole = getFilterRole($event)"
-        >
-          <option value="">Todas</option>
-          <option value="AGENCY_ADMIN">{{ roleLabels.AGENCY_ADMIN }}</option>
-          <option value="AGENCY_USER">{{ roleLabels.AGENCY_USER }}</option>
-          <option value="CLIENT_USER">{{ roleLabels.CLIENT_USER }}</option>
-        </select>
-      </label>
-
-      <label style="display: grid; gap: 4px;">
-        Ativo
-        <select
-          name="filterActive"
-          [value]="filterActive"
-          (change)="filterActive = getFilterActive($event)"
-        >
-          <option value="all">Todos</option>
-          <option value="active">Ativos</option>
-          <option value="inactive">Inativos</option>
-        </select>
-      </label>
-    </div>
-
-    @if (vm.users.length === 0) {
-    <p>Nenhum usuário cadastrado.</p>
-    } @else if (getFilteredUsers(vm.users).length === 0) {
-    <p>Nenhum usuário encontrado com os filtros atuais.</p>
-    } @else {
-    <div style="overflow-x: auto;">
-      <table style="width: 100%; border-collapse: collapse;">
-        <thead>
-          <tr>
-            <th style="text-align: left; padding: 8px;">Nome</th>
-            <th style="text-align: left; padding: 8px;">Email</th>
-            <th style="text-align: left; padding: 8px;">Função</th>
-            <th style="text-align: left; padding: 8px;">Ativo</th>
-            <th style="text-align: left; padding: 8px;">Empresa</th>
-            <th style="text-align: left; padding: 8px;">Código</th>
-            <th style="text-align: left; padding: 8px;">Criado em</th>
-            <th style="text-align: left; padding: 8px;"></th>
-          </tr>
-        </thead>
-        <tbody>
-          @for (u of getFilteredUsers(vm.users); track u.id) {
-          <tr>
-            <td style="padding: 8px;">{{ u.fullName }}</td>
-            <td style="padding: 8px;">{{ u.email }}</td>
-            <td style="padding: 8px;">{{ roleLabels[u.role] ?? u.role }}</td>
-            <td style="padding: 8px;">{{ u.active ? 'Sim' : 'Não' }}</td>
-            <td style="padding: 8px;">{{ getCompanyName(u) ?? '-' }}</td>
-            <td style="padding: 8px;">
-              <span>{{ u.companyCode ?? '-' }}</span>
-              @if (u.companyCode) {
-              <button
-                type="button"
-                style="margin-left: 6px;"
-                (click)="copyCompanyCode(u.companyCode)"
+          <form (submit)="onSubmit($event)" class="users-form">
+            <label class="users-field">
+              <span class="users-field__label">
+                Papel do usuário <span class="users-required">*</span>
+              </span>
+              <select
+                name="role"
+                required
+                [value]="form.role"
+                class="users-select"
+                (change)="onRoleChange($event)"
               >
-                Copiar
+                <option value="AGENCY_ADMIN">{{ roleLabels.AGENCY_ADMIN }}</option>
+                <option value="AGENCY_USER">{{ roleLabels.AGENCY_USER }}</option>
+                <option value="CLIENT_USER">{{ roleLabels.CLIENT_USER }}</option>
+              </select>
+            </label>
+
+            <label class="users-field">
+              <span class="users-field__label">
+                Nome completo <span class="users-required">*</span>
+              </span>
+              <input
+                name="fullName"
+                required
+                [value]="form.fullName"
+                class="users-input"
+                [class.users-input--error]="fieldErrors.fullName"
+                (input)="onTextInput('fullName', $event)"
+              />
+              @if (fieldErrors.fullName) {
+              <small class="users-error">{{ fieldErrors.fullName }}</small>
+              }
+            </label>
+
+            <label class="users-field">
+              <span class="users-field__label">Email <span class="users-required">*</span></span>
+              <input
+                name="email"
+                type="email"
+                required
+                [value]="form.email"
+                class="users-input"
+                [class.users-input--error]="fieldErrors.email"
+                (input)="onTextInput('email', $event)"
+              />
+              @if (fieldErrors.email) {
+              <small class="users-error">{{ fieldErrors.email }}</small>
+              }
+            </label>
+
+            @if (!editingId) {
+            <label class="users-field">
+              <span class="users-field__label">Senha <span class="users-required">*</span></span>
+              <input
+                name="password"
+                [type]="showPassword ? 'text' : 'password'"
+                minlength="8"
+                autocomplete="new-password"
+                required
+                [value]="form.password"
+                class="users-input"
+                [class.users-input--error]="fieldErrors.password"
+                (input)="onTextInput('password', $event)"
+              />
+              @if (fieldErrors.password) {
+              <small class="users-error">{{ fieldErrors.password }}</small>
+              }
+            </label>
+            <label class="users-field">
+              <span class="users-field__label">
+                Repetir senha <span class="users-required">*</span>
+              </span>
+              <input
+                name="confirmPassword"
+                [type]="showPassword ? 'text' : 'password'"
+                minlength="8"
+                autocomplete="new-password"
+                required
+                [value]="form.confirmPassword"
+                class="users-input"
+                [class.users-input--error]="fieldErrors.confirmPassword"
+                (input)="onTextInput('confirmPassword', $event)"
+              />
+              @if (fieldErrors.confirmPassword) {
+              <small class="users-error">{{ fieldErrors.confirmPassword }}</small>
+              }
+            </label>
+            <div class="users-form__row">
+              <label class="users-check">
+                <input
+                  type="checkbox"
+                  [checked]="showPassword"
+                  (change)="showPassword = getChecked($event)"
+                />
+                <span>Mostrar senha</span>
+              </label>
+              <small class="users-muted">Mínimo 8 caracteres.</small>
+            </div>
+            }
+
+            @if (editingId) {
+            <label class="users-field">
+              <span class="users-field__label">Ativo</span>
+              <select
+                name="active"
+                [value]="form.activeStr"
+                class="users-select"
+                (change)="form.activeStr = getBoolStr($event)"
+              >
+                <option value="true">Sim</option>
+                <option value="false">Não</option>
+              </select>
+            </label>
+            }
+
+            @if (form.role === 'CLIENT_USER') {
+            <label class="users-field">
+              <span class="users-field__label">
+                Empresa (código ou UUID) <span class="users-required">*</span>
+              </span>
+              <input
+                name="companyId"
+                list="company-options"
+                placeholder="CABC-CL-XXX"
+                [value]="form.companyIdText"
+                class="users-input"
+                [class.users-input--error]="fieldErrors.companyId"
+                (input)="onTextInput('companyId', $event)"
+              />
+              @if (fieldErrors.companyId) {
+              <small class="users-error">{{ fieldErrors.companyId }}</small>
+              } @else {
+              <small class="users-muted">Ex.: CABC-CL-XXX ou UUID.</small>
+              }
+            </label>
+
+            <datalist id="company-options">
+              @for (c of clientCompanies; track c.id) {
+              <option [value]="c.companyCode">{{ c.name }} ({{ c.companyCode }})</option>
+              }
+            </datalist>
+
+            @if (clientCompanies.length === 0) {
+            <small class="users-muted">
+              Cadastre uma empresa cliente para usar o código.
+            </small>
+            }
+            }
+
+            <div class="users-form__actions">
+              <button type="submit" class="btn btn--primary">
+                Salvar
+              </button>
+              @if (editingId) {
+              <button type="button" class="btn btn--ghost" (click)="cancelEdit()">
+                Cancelar
               </button>
               }
-            </td>
-            <td style="padding: 8px;">{{ u.createdAt | date : 'dd/MM/yyyy HH:mm' }}</td>
-            <td style="padding: 8px; display: flex; gap: 8px; flex-wrap: wrap;">
-              <button type="button" (click)="startEdit(u)">Editar</button>
-              <button type="button" (click)="onDelete(u)">Remover</button>
-            </td>
-          </tr>
+            </div>
+            @if (formError) {
+            <div class="users-alert users-alert--error">{{ formError }}</div>
+            }
+          </form>
+        </section>
+
+        <section class="users-card users-card--list">
+          <div class="users-card__head users-card__head--row">
+            <div>
+              <h3 class="users-card__title">Usuários cadastrados</h3>
+              <p class="users-muted">Filtre e acompanhe os acessos do time.</p>
+            </div>
+          </div>
+
+          @if (vm$ | async; as vm) {
+          @if (vm.status === 'loading') {
+          <div class="users-state">Carregando...</div>
+          } @else if (vm.status === 'error') {
+          <div class="users-alert users-alert--error">
+            Erro ao carregar usuários: {{ vm.message }}
+          </div>
+          } @else {
+          <div class="users-toolbar">
+            <div class="users-total">
+              <span>Total</span>
+              <strong>{{ vm.users.length }}</strong>
+            </div>
+          </div>
+
+          <div class="users-filters">
+            <label class="users-field">
+              <span class="users-field__label">Buscar usuários</span>
+              <input
+                name="search"
+                placeholder="Nome, email, empresa ou código"
+                [value]="searchTerm"
+                class="users-input"
+                (input)="searchTerm = getValue($event)"
+              />
+            </label>
+
+            <label class="users-field">
+              <span class="users-field__label">Papel do usuário</span>
+              <select
+                name="filterRole"
+                [value]="filterRole"
+                class="users-select"
+                (change)="filterRole = getFilterRole($event)"
+              >
+                <option value="">Todas</option>
+                <option value="AGENCY_ADMIN">{{ roleLabels.AGENCY_ADMIN }}</option>
+                <option value="AGENCY_USER">{{ roleLabels.AGENCY_USER }}</option>
+                <option value="CLIENT_USER">{{ roleLabels.CLIENT_USER }}</option>
+              </select>
+            </label>
+
+            <label class="users-field">
+              <span class="users-field__label">Ativo</span>
+              <select
+                name="filterActive"
+                [value]="filterActive"
+                class="users-select"
+                (change)="filterActive = getFilterActive($event)"
+              >
+                <option value="all">Todos</option>
+                <option value="active">Ativos</option>
+                <option value="inactive">Inativos</option>
+              </select>
+            </label>
+          </div>
+
+          @if (vm.users.length === 0) {
+          <div class="users-empty">Nenhum usuário cadastrado.</div>
+          } @else if (getFilteredUsers(vm.users).length === 0) {
+          <div class="users-empty">Nenhum usuário encontrado com os filtros atuais.</div>
+          } @else {
+          <div class="users-table-wrap">
+            <table class="users-table">
+              <thead>
+                <tr>
+                  <th>Nome</th>
+                  <th>Email</th>
+                  <th>Papel do usuário</th>
+                  <th>Ativo</th>
+                  <th>Empresa</th>
+                  <th>Código</th>
+                  <th>Criado em</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (u of getFilteredUsers(vm.users); track u.id) {
+                <tr>
+                  <td>{{ u.fullName }}</td>
+                  <td>{{ u.email }}</td>
+                  <td>
+                    <span
+                      class="users-chip"
+                      [class.users-chip--admin]="u.role === 'AGENCY_ADMIN'"
+                      [class.users-chip--agency]="u.role === 'AGENCY_USER'"
+                      [class.users-chip--client]="u.role === 'CLIENT_USER'"
+                    >
+                      {{ roleLabels[u.role] ?? u.role }}
+                    </span>
+                  </td>
+                  <td>
+                    <span
+                      class="users-chip"
+                      [class.users-chip--active]="u.active"
+                      [class.users-chip--inactive]="!u.active"
+                    >
+                      {{ u.active ? 'Sim' : 'Não' }}
+                    </span>
+                  </td>
+                  <td>{{ getCompanyName(u) ?? '-' }}</td>
+                  <td>
+                    <div class="users-code">
+                      <span class="users-code__value">{{ u.companyCode ?? '-' }}</span>
+                      @if (u.companyCode) {
+                      <button
+                        type="button"
+                        class="btn btn--ghost btn--sm users-copy-btn"
+                        (click)="copyCompanyCode(u.companyCode, u.id)"
+                      >
+                        {{ isCopied(u.id) ? 'Copiado!' : 'Copiar' }}
+                      </button>
+                      }
+                    </div>
+                  </td>
+                  <td>{{ u.createdAt | date : 'dd/MM/yyyy HH:mm' }}</td>
+                  <td class="users-actions">
+                    <button
+                      type="button"
+                      class="btn btn--ghost btn--sm"
+                      (click)="startEdit(u)"
+                    >
+                      Editar
+                    </button>
+                    <button
+                      type="button"
+                      class="btn btn--danger btn--sm"
+                      (click)="openDeleteModal(u)"
+                    >
+                      Remover
+                    </button>
+                  </td>
+                </tr>
+                }
+              </tbody>
+            </table>
+          </div>
           }
-        </tbody>
-      </table>
-    </div>
-    }
-    } }
-  `,
+          }
+          }
+        </section>
+      </div>
+      @if (deleteTarget) {
+      <div class="users-modal" (click)="closeDeleteModal()">
+        <div class="users-modal__panel" (click)="$event.stopPropagation()">
+          <div class="users-modal__head">
+            <h4 class="users-modal__title">Confirmar exclusão</h4>
+            <button
+              type="button"
+              class="users-modal__close"
+              aria-label="Fechar"
+              [disabled]="deletePending"
+              (click)="closeDeleteModal()"
+            >
+              &times;
+            </button>
+          </div>
+          <p class="users-modal__text">
+            Tem certeza que deseja remover <strong>{{ deleteTarget.fullName }}</strong>?
+          </p>
+          <label class="users-modal__check">
+            <input
+              type="checkbox"
+              [checked]="deleteConfirmed"
+              (change)="deleteConfirmed = getChecked($event); deleteError = null"
+            />
+            <span>Estou ciente que essa ação não pode ser desfeita.</span>
+          </label>
+          @if (deleteError) {
+          <div class="users-alert users-alert--error">{{ deleteError }}</div>
+          }
+          <div class="users-modal__actions">
+            <button
+              type="button"
+              class="btn btn--ghost"
+              [disabled]="deletePending"
+              (click)="closeDeleteModal()"
+            >
+              Cancelar
+            </button>
+            <button
+              type="button"
+              class="btn btn--danger"
+              [disabled]="!deleteConfirmed || deletePending"
+              (click)="confirmDelete()"
+            >
+              Remover
+            </button>
+          </div>
+        </div>
+      </div>
+      }
+    </section>`,
 })
 export class AdminUsersComponent {
   readonly vm$;
@@ -268,6 +421,7 @@ export class AdminUsersComponent {
     fullName: string;
     email: string;
     password: string;
+    confirmPassword: string;
     role: UserRole;
     companyIdText: string;
     activeStr: 'true' | 'false';
@@ -275,13 +429,22 @@ export class AdminUsersComponent {
     fullName: '',
     email: '',
     password: '',
+    confirmPassword: '',
     role: 'AGENCY_USER',
     companyIdText: '',
     activeStr: 'true',
   };
 
   formError: string | null = null;
-  fieldErrors: Partial<Record<'fullName' | 'email' | 'password' | 'companyId', string>> = {};
+  deleteTarget: UserDto | null = null;
+  deleteConfirmed = false;
+  deletePending = false;
+  deleteError: string | null = null;
+  copiedUserId: string | null = null;
+  private copyResetId: number | null = null;
+  fieldErrors: Partial<
+    Record<'fullName' | 'email' | 'password' | 'confirmPassword' | 'companyId', string>
+  > = {};
   searchTerm = '';
   filterRole: '' | UserRole = '';
   filterActive: 'all' | 'active' | 'inactive' = 'all';
@@ -438,6 +601,7 @@ export class AdminUsersComponent {
     this.form.fullName = u.fullName;
     this.form.email = u.email;
     this.form.password = '';
+    this.form.confirmPassword = '';
     this.form.role = u.role;
     this.form.companyIdText = u.companyCode ?? u.companyId ?? '';
     this.form.activeStr = u.active ? 'true' : 'false';
@@ -455,6 +619,7 @@ export class AdminUsersComponent {
       fullName: '',
       email: '',
       password: '',
+      confirmPassword: '',
       role: 'AGENCY_USER',
       companyIdText: '',
       activeStr: 'true',
@@ -463,7 +628,10 @@ export class AdminUsersComponent {
     this.fieldErrors = {};
   }
 
-  onTextInput(field: 'fullName' | 'email' | 'password' | 'companyId', ev: Event): void {
+  onTextInput(
+    field: 'fullName' | 'email' | 'password' | 'confirmPassword' | 'companyId',
+    ev: Event
+  ): void {
     const value = this.getValue(ev);
     if (field === 'fullName') {
       this.form.fullName = value;
@@ -471,6 +639,8 @@ export class AdminUsersComponent {
       this.form.email = value;
     } else if (field === 'password') {
       this.form.password = value;
+    } else if (field === 'confirmPassword') {
+      this.form.confirmPassword = value;
     } else {
       this.form.companyIdText = value;
     }
@@ -501,10 +671,16 @@ export class AdminUsersComponent {
 
     if (!this.editingId) {
       const password = this.form.password.trim();
+      const confirmPassword = this.form.confirmPassword.trim();
       if (!password) {
         errors.password = 'Informe a senha.';
       } else if (password.length < 8) {
         errors.password = 'Senha deve ter ao menos 8 caracteres.';
+      }
+      if (!confirmPassword) {
+        errors.confirmPassword = 'Repita a senha.';
+      } else if (password && confirmPassword !== password) {
+        errors.confirmPassword = 'As senhas não conferem.';
       }
     }
 
@@ -592,43 +768,77 @@ export class AdminUsersComponent {
     }
   }
 
-  async onDelete(u: UserDto): Promise<void> {
-    const confirmation = prompt(`Para remover ${u.fullName}, digite o email: ${u.email}`);
-    if (!confirmation || confirmation.trim().toLowerCase() !== u.email.toLowerCase()) {
+  openDeleteModal(u: UserDto): void {
+    this.deleteTarget = u;
+    this.deleteConfirmed = false;
+    this.deletePending = false;
+    this.deleteError = null;
+  }
+
+  closeDeleteModal(): void {
+    if (this.deletePending) return;
+    this.deleteTarget = null;
+    this.deleteConfirmed = false;
+    this.deletePending = false;
+    this.deleteError = null;
+  }
+
+  async confirmDelete(): Promise<void> {
+    const target = this.deleteTarget;
+    if (!target || this.deletePending) return;
+    if (!this.deleteConfirmed) {
+      this.deleteError = 'Confirme que está ciente para continuar.';
       return;
     }
 
-    this.formError = null;
+    this.deletePending = true;
+    this.deleteError = null;
 
     try {
-      await firstValueFrom(this.api.deleteUser(u.id));
-      if (this.editingId === u.id) {
+      await firstValueFrom(this.api.deleteUser(target.id));
+      if (this.editingId === target.id) {
         this.cancelEdit();
       }
       this.refresh$.next();
+      this.closeDeleteModal();
     } catch (err: unknown) {
       if (err instanceof HttpErrorResponse) {
-        this.formError = `Erro HTTP ${err.status}: ${
+        this.deleteError = `Erro HTTP ${err.status}: ${
           err.error?.message ?? err.statusText ?? 'Falha ao remover'
         }`;
         return;
       }
-      this.formError = err instanceof Error ? err.message : 'Falha inesperada ao remover usuário';
+      this.deleteError = err instanceof Error ? err.message : 'Falha inesperada ao remover usuário';
+    } finally {
+      this.deletePending = false;
     }
   }
 
-  copyCompanyCode(companyCode: string | null): void {
+  copyCompanyCode(companyCode: string | null, userId: string): void {
     if (!companyCode) return;
 
-    if (navigator.clipboard?.writeText) {
-      navigator.clipboard.writeText(companyCode).catch(() => this.fallbackCopy(companyCode));
+    const markCopied = (): void => {
+      this.copiedUserId = userId;
+      if (this.copyResetId !== null) {
+        clearTimeout(this.copyResetId);
+      }
+      this.copyResetId = window.setTimeout(() => {
+        this.copiedUserId = null;
+        this.copyResetId = null;
+      }, 5000);
+    };
+
+    if (this.fallbackCopy(companyCode)) {
+      markCopied();
       return;
     }
 
-    this.fallbackCopy(companyCode);
+    if (navigator.clipboard?.writeText) {
+      navigator.clipboard.writeText(companyCode).then(() => markCopied()).catch(() => undefined);
+    }
   }
 
-  private fallbackCopy(text: string): void {
+  private fallbackCopy(text: string): boolean {
     const textarea = document.createElement('textarea');
     textarea.value = text;
     textarea.style.position = 'fixed';
@@ -636,7 +846,17 @@ export class AdminUsersComponent {
     document.body.appendChild(textarea);
     textarea.focus();
     textarea.select();
-    document.execCommand('copy');
+    let copied = false;
+    try {
+      copied = document.execCommand('copy');
+    } catch {
+      copied = false;
+    }
     document.body.removeChild(textarea);
+    return copied;
+  }
+
+  isCopied(userId: string): boolean {
+    return userId === this.copiedUserId;
   }
 }

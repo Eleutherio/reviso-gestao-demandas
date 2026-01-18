@@ -65,7 +65,7 @@ export class ShellComponent implements OnInit, OnDestroy {
     { label: 'Relatórios', path: '/agency/reports', roles: ['AGENCY_USER', 'AGENCY_ADMIN'] },
 
     { label: 'Empresas', path: '/admin/companies', roles: ['AGENCY_ADMIN'] },
-    { label: 'Usuários', path: '/admin/users', roles: ['AGENCY_ADMIN'] },
+    { label: 'Administrar Usuários', path: '/admin/users', roles: ['AGENCY_ADMIN'] },
   ];
 
   constructor(private readonly auth: AuthService, private readonly router: Router) {
