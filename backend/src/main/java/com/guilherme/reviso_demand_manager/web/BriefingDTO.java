@@ -5,6 +5,7 @@ import java.util.UUID;
 
 public record BriefingDTO(
     UUID id,
+    UUID agencyId,
     UUID companyId,
     String companyName,
     UUID createdByUserId,

@@ -9,6 +9,7 @@ public record UserDTO(
     String fullName,
     String email,
     UserRole role,
+    UUID agencyId,
     UUID companyId,
     String companyCode,
     Boolean active,

@@ -9,6 +9,7 @@ public record LoginResponseDTO(
     String fullName,
     String email,
     UserRole role,
-    UUID companyId
+    UUID companyId,
+    UUID agencyId
 ) {
 }

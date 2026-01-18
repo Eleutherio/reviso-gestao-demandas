@@ -7,6 +7,7 @@ import java.util.UUID;
 
 public record CompanyDTO(
     UUID id,
+    UUID agencyId,
     String companyCode,
     String name,
     CompanyType type,
