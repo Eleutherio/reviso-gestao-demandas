@@ -24,10 +24,15 @@ public class SecurityConfig {
 
     private final JwtAuthFilter jwtAuthFilter;
     private final CorrelationIdFilter correlationIdFilter;
+    private final TenantContextFilter tenantContextFilter;
 
-    public SecurityConfig(JwtAuthFilter jwtAuthFilter, CorrelationIdFilter correlationIdFilter) {
+    public SecurityConfig(
+            JwtAuthFilter jwtAuthFilter,
+            CorrelationIdFilter correlationIdFilter,
+            TenantContextFilter tenantContextFilter) {
         this.jwtAuthFilter = jwtAuthFilter;
         this.correlationIdFilter = correlationIdFilter;
+        this.tenantContextFilter = tenantContextFilter;
     }
 
     @Bean
@@ -67,7 +72,8 @@ public class SecurityConfig {
                 .anyRequest().authenticated()
             )
             .addFilterBefore(correlationIdFilter, UsernamePasswordAuthenticationFilter.class)
-            .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
+            .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
+            .addFilterAfter(tenantContextFilter, JwtAuthFilter.class);
 
         return http.build();
     }
