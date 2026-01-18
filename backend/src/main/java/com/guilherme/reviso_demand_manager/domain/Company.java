@@ -15,6 +15,9 @@ public class Company {
     @Column(columnDefinition = "UUID")
     private UUID id;
 
+    @Column(name = "agency_id", columnDefinition = "UUID")
+    private UUID agencyId;
+
     @Column(name = "company_code", nullable = false, length = 32, updatable = false)
     private String companyCode;
 
@@ -51,6 +54,14 @@ public class Company {
 
     public void setId(UUID id) {
         this.id = id;
+    }
+
+    public UUID getAgencyId() {
+        return agencyId;
+    }
+
+    public void setAgencyId(UUID agencyId) {
+        this.agencyId = agencyId;
     }
 
     public String getCompanyCode() {

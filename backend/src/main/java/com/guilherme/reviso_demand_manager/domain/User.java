@@ -31,6 +31,9 @@ public class User {
     @Column(name = "company_id", columnDefinition = "UUID")
     private UUID companyId;
 
+    @Column(name = "agency_id", columnDefinition = "UUID")
+    private UUID agencyId;
+
     @Column(nullable = false)
     private Boolean active;
 
@@ -83,6 +86,14 @@ public class User {
 
     public void setCompanyId(UUID companyId) {
         this.companyId = companyId;
+    }
+
+    public UUID getAgencyId() {
+        return agencyId;
+    }
+
+    public void setAgencyId(UUID agencyId) {
+        this.agencyId = agencyId;
     }
 
     public Boolean getActive() {
