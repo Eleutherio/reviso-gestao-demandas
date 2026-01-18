@@ -34,10 +34,15 @@ public class RequestService {
     }
 
     @Transactional
-    public RequestDTO createRequest(CreateRequestDTO dto) {
+    public RequestDTO createRequest(CreateRequestDTO dto, UUID agencyId) {
+        if (agencyId == null) {
+            throw new IllegalArgumentException("agencyId is required");
+        }
+        Company company = resolveCompany(dto.companyId(), agencyId);
         Request request = new Request();
         request.setId(UUID.randomUUID());
-        request.setCompanyId(dto.companyId());
+        request.setAgencyId(company.getAgencyId());
+        request.setCompanyId(company.getId());
         request.setBriefingId(dto.briefingId());
         request.setTitle(dto.title());
         request.setDescription(dto.description());
@@ -55,8 +60,11 @@ public class RequestService {
     }
 
     @Transactional(readOnly = true)
-    public RequestDTO getRequestById(UUID id) {
-        Request request = requestRepository.findById(id)
+    public RequestDTO getRequestById(UUID id, UUID agencyId) {
+        if (agencyId == null) {
+            throw new IllegalArgumentException("agencyId is required");
+        }
+        Request request = requestRepository.findByIdAndAgencyId(id, agencyId)
                 .orElseThrow(() -> new ResourceNotFoundException("Request not found"));
         return toDTO(request);
     }
@@ -66,6 +74,7 @@ public class RequestService {
             RequestStatus status,
             RequestPriority priority,
             RequestType type,
+            UUID agencyId,
             UUID companyId,
             OffsetDateTime dueBefore,
             OffsetDateTime createdFrom,
@@ -75,11 +84,14 @@ public class RequestService {
             String sortBy,
             String direction) {
 
+        if (agencyId == null) {
+            throw new IllegalArgumentException("agencyId is required");
+        }
         Sort.Direction sortDirection = "desc".equalsIgnoreCase(direction) ? Sort.Direction.DESC : Sort.Direction.ASC;
         Pageable pageable = PageRequest.of(page, size, Sort.by(sortDirection, sortBy));
 
         Specification<Request> spec = RequestSpecifications.build(
-            companyId, status, type, priority, dueBefore, createdFrom, createdTo
+            agencyId, companyId, status, type, priority, dueBefore, createdFrom, createdTo
         );
 
         return requestRepository.findAll(spec, pageable).map(this::toDTO);
@@ -88,6 +100,7 @@ public class RequestService {
     private RequestDTO toDTO(Request request) {
         return new RequestDTO(
                 request.getId(),
+                request.getAgencyId(),
                 request.getCompanyId(),
                 resolveCompanyName(request.getCompanyId()),
                 request.getBriefingId(),
@@ -103,6 +116,11 @@ public class RequestService {
                 request.getCreatedAt(),
                 request.getUpdatedAt()
         );
+    }
+
+    private Company resolveCompany(UUID companyId, UUID agencyId) {
+        return companyRepository.findByIdAndAgencyId(companyId, agencyId)
+                .orElseThrow(() -> new IllegalArgumentException("Empresa nao encontrada"));
     }
 
     private String resolveCompanyName(UUID companyId) {

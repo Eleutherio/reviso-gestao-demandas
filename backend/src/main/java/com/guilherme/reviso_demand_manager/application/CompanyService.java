@@ -26,9 +26,13 @@ public class CompanyService {
     }
 
     @Transactional
-    public CompanyDTO createCompany(CreateCompanyDTO dto) {
+    public CompanyDTO createCompany(CreateCompanyDTO dto, UUID agencyId) {
+        if (agencyId == null) {
+            throw new IllegalArgumentException("agencyId is required");
+        }
         Company company = new Company();
         company.setId(UUID.randomUUID());
+        company.setAgencyId(agencyId);
         company.setCompanyCode(generateCompanyCode(dto.name(), dto.type(), dto.segment()));
         company.setName(dto.name());
         company.setType(dto.type());
@@ -44,23 +48,32 @@ public class CompanyService {
     }
 
     @Transactional(readOnly = true)
-    public List<CompanyDTO> listAllCompanies() {
-        return companyRepository.findAll().stream()
+    public List<CompanyDTO> listAllCompanies(UUID agencyId) {
+        if (agencyId == null) {
+            throw new IllegalArgumentException("agencyId is required");
+        }
+        return companyRepository.findByAgencyIdOrderByNameAsc(agencyId).stream()
                 .map(this::toDTO)
                 .toList();
     }
 
     @Transactional(readOnly = true)
-    public List<CompanyDTO> listClientCompanies() {
-        return companyRepository.findByTypeOrderByNameAsc(CompanyType.CLIENT)
+    public List<CompanyDTO> listClientCompanies(UUID agencyId) {
+        if (agencyId == null) {
+            throw new IllegalArgumentException("agencyId is required");
+        }
+        return companyRepository.findByAgencyIdAndTypeOrderByNameAsc(agencyId, CompanyType.CLIENT)
                 .stream()
                 .map(this::toDTO)
                 .toList();
     }
 
     @Transactional
-    public CompanyDTO updateCompany(UUID companyId, UpdateCompanyDTO dto) {
-        Company company = companyRepository.findById(companyId)
+    public CompanyDTO updateCompany(UUID companyId, UpdateCompanyDTO dto, UUID agencyId) {
+        if (agencyId == null) {
+            throw new IllegalArgumentException("agencyId is required");
+        }
+        Company company = companyRepository.findByIdAndAgencyId(companyId, agencyId)
                 .orElseThrow(() -> new ResourceNotFoundException("Empresa não encontrada"));
 
         if (dto.name() != null) {
@@ -99,6 +112,7 @@ public class CompanyService {
     private CompanyDTO toDTO(Company company) {
         return new CompanyDTO(
                 company.getId(),
+                company.getAgencyId(),
                 company.getCompanyCode(),
                 company.getName(),
                 company.getType(),

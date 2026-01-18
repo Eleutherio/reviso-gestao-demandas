@@ -40,13 +40,18 @@ public class UserService {
     }
 
     @Transactional
-    public UserDTO createUser(CreateUserDTO dto) {
+    public UserDTO createUser(CreateUserDTO dto, UUID agencyId) {
         // Validate email uniqueness
         if (userRepository.findByEmail(dto.email()).isPresent()) {
             throw new IllegalArgumentException("Email já está em uso");
         }
 
-        UUID resolvedCompanyId = resolveCompanyId(dto.role(), dto.companyId(), dto.companyCode());
+        if (agencyId == null) {
+            throw new IllegalArgumentException("agencyId is required");
+        }
+        Company company = resolveCompany(dto.role(), agencyId, dto.companyId(), dto.companyCode());
+        UUID resolvedCompanyId = company != null ? company.getId() : null;
+        UUID resolvedAgencyId = resolveUserAgencyId(dto.role(), agencyId, company);
 
         User user = new User();
         user.setId(UUID.randomUUID());
@@ -54,17 +59,21 @@ public class UserService {
         user.setEmail(dto.email());
         user.setPasswordHash(passwordEncoder.encode(dto.password()));
         user.setRole(dto.role());
+        user.setAgencyId(resolvedAgencyId);
         user.setCompanyId(resolvedCompanyId);
         user.setActive(true);
         user.setCreatedAt(OffsetDateTime.now());
 
         User saved = userRepository.save(user);
-        return toDTO(saved, resolveCompanyCode(resolvedCompanyId));
+        return toDTO(saved, company != null ? company.getCompanyCode() : null);
     }
 
     @Transactional(readOnly = true)
-    public List<UserDTO> listAllUsers() {
-        List<User> users = userRepository.findAll();
+    public List<UserDTO> listAllUsers(UUID agencyId) {
+        if (agencyId == null) {
+            throw new IllegalArgumentException("agencyId is required");
+        }
+        List<User> users = userRepository.findByAgencyId(agencyId);
         Map<UUID, String> companyCodes = resolveCompanyCodes(users);
         return users.stream()
                 .map(user -> toDTO(user, companyCodes.get(user.getCompanyId())))
@@ -72,8 +81,11 @@ public class UserService {
     }
 
     @Transactional
-    public UserDTO updateUser(UUID id, UpdateUserDTO dto) {
-        User user = userRepository.findById(id)
+    public UserDTO updateUser(UUID id, UpdateUserDTO dto, UUID agencyId) {
+        if (agencyId == null) {
+            throw new IllegalArgumentException("agencyId is required");
+        }
+        User user = userRepository.findByIdAndAgencyId(id, agencyId)
                 .orElseThrow(() -> new ResourceNotFoundException("Usuario nao encontrado"));
 
         if (!user.getEmail().equals(dto.email())) {
@@ -84,23 +96,29 @@ public class UserService {
                     });
         }
 
-        UUID resolvedCompanyId = resolveCompanyId(dto.role(), dto.companyId(), dto.companyCode());
+        Company company = resolveCompany(dto.role(), agencyId, dto.companyId(), dto.companyCode());
+        UUID resolvedCompanyId = company != null ? company.getId() : null;
+        UUID resolvedAgencyId = resolveUserAgencyId(dto.role(), agencyId, company);
 
         user.setFullName(dto.fullName());
         user.setEmail(dto.email());
         user.setRole(dto.role());
+        user.setAgencyId(resolvedAgencyId);
         user.setCompanyId(resolvedCompanyId);
         if (dto.active() != null) {
             user.setActive(dto.active());
         }
 
         User saved = userRepository.save(user);
-        return toDTO(saved, resolveCompanyCode(resolvedCompanyId));
+        return toDTO(saved, company != null ? company.getCompanyCode() : null);
     }
 
     @Transactional
-    public void deleteUser(UUID id) {
-        User user = userRepository.findById(id)
+    public void deleteUser(UUID id, UUID agencyId) {
+        if (agencyId == null) {
+            throw new IllegalArgumentException("agencyId is required");
+        }
+        User user = userRepository.findByIdAndAgencyId(id, agencyId)
                 .orElseThrow(() -> new ResourceNotFoundException("Usuario nao encontrado"));
         userRepository.delete(user);
     }
@@ -111,6 +129,7 @@ public class UserService {
                 user.getFullName(),
                 user.getEmail(),
                 user.getRole(),
+                user.getAgencyId(),
                 user.getCompanyId(),
                 companyCode,
                 user.getActive(),
@@ -122,34 +141,57 @@ public class UserService {
         return toDTO(user, resolveCompanyCode(user.getCompanyId()));
     }
 
-    private UUID resolveCompanyId(UserRole role, UUID companyId, String companyCode) {
+    private Company resolveCompany(UserRole role, UUID agencyId, UUID companyId, String companyCode) {
         String normalizedCode = normalizeCompanyCode(companyCode);
         boolean hasCode = normalizedCode != null && !normalizedCode.isBlank();
 
+        Company company = null;
         if (companyId != null && hasCode) {
-            Company company = companyRepository.findByCompanyCodeIgnoreCase(normalizedCode)
-                .orElseThrow(() -> new IllegalArgumentException("Codigo da empresa invalido"));
+            company = findCompanyByCode(normalizedCode, agencyId);
             if (!company.getId().equals(companyId)) {
                 throw new IllegalArgumentException("companyId e companyCode nao correspondem");
             }
-            return companyId;
-        }
-
-        if (companyId != null) {
-            return companyId;
-        }
-
-        if (hasCode) {
-            Company company = companyRepository.findByCompanyCodeIgnoreCase(normalizedCode)
-                .orElseThrow(() -> new IllegalArgumentException("Codigo da empresa invalido"));
-            return company.getId();
+        } else if (companyId != null) {
+            company = findCompanyById(companyId, agencyId);
+        } else if (hasCode) {
+            company = findCompanyByCode(normalizedCode, agencyId);
         }
 
         if (role == UserRole.CLIENT_USER) {
-            throw new IllegalArgumentException("CLIENT_USER deve ter companyId ou companyCode");
+            if (company == null) {
+                throw new IllegalArgumentException("CLIENT_USER deve ter companyId ou companyCode");
+            }
+            return company;
         }
 
         return null;
+    }
+
+    private UUID resolveUserAgencyId(UserRole role, UUID agencyId, Company company) {
+        if (agencyId == null) {
+            throw new IllegalArgumentException("agencyId is required");
+        }
+        if (role == UserRole.CLIENT_USER) {
+            UUID companyAgencyId = company != null ? company.getAgencyId() : null;
+            if (companyAgencyId == null) {
+                throw new IllegalArgumentException("Empresa sem agencia vinculada");
+            }
+            if (!companyAgencyId.equals(agencyId)) {
+                throw new IllegalArgumentException("Empresa nao pertence a agencia atual");
+            }
+            return companyAgencyId;
+        }
+        return agencyId;
+    }
+
+    private Company findCompanyById(UUID companyId, UUID agencyId) {
+        return companyRepository.findByIdAndAgencyId(companyId, agencyId)
+            .orElseThrow(() -> new IllegalArgumentException("Empresa nao encontrada"));
+    }
+
+    private Company findCompanyByCode(String companyCode, UUID agencyId) {
+        return companyRepository.findByCompanyCodeIgnoreCaseAndAgencyId(companyCode, agencyId)
+            .orElseThrow(() -> new IllegalArgumentException("Codigo da empresa invalido"));
     }
 
     private String normalizeCompanyCode(String rawCode) {

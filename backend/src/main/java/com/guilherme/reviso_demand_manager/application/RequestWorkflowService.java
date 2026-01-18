@@ -31,13 +31,12 @@ public class RequestWorkflowService {
                                     RequestStatus toStatus,
                                     String message,
                                     Boolean visibleToClient,
-                                    UUID actorId) {
+                                    UUID actorId,
+                                    UUID agencyId) {
         if (eventType == null) {
             throw new IllegalArgumentException("eventType is required");
         }
-
-        Request request = requestRepository.findById(requestId)
-                .orElseThrow(() -> new ResourceNotFoundException("Request not found"));
+        Request request = loadRequest(requestId, agencyId);
 
         RequestStatus fromStatus = request.getStatus();
 
@@ -71,22 +70,21 @@ public class RequestWorkflowService {
     }
 
     @Transactional
-    public RequestEvent changeStatus(UUID requestId, RequestStatus toStatus, String message, UUID actorId) {
-        return appendEvent(requestId, RequestEventType.STATUS_CHANGED, toStatus, message, true, actorId);
+    public RequestEvent changeStatus(UUID requestId, RequestStatus toStatus, String message, UUID actorId, UUID agencyId) {
+        return appendEvent(requestId, RequestEventType.STATUS_CHANGED, toStatus, message, true, actorId, agencyId);
     }
 
     @Transactional
-    public RequestEvent addComment(UUID requestId, String message, UUID actorId, Boolean visibleToClient) {
+    public RequestEvent addComment(UUID requestId, String message, UUID actorId, Boolean visibleToClient, UUID agencyId) {
         if (message == null || message.isBlank()) {
             throw new IllegalArgumentException("comment message is required");
         }
-        return appendEvent(requestId, RequestEventType.COMMENT_ADDED, null, message, visibleToClient, actorId);
+        return appendEvent(requestId, RequestEventType.COMMENT_ADDED, null, message, visibleToClient, actorId, agencyId);
     }
 
     @Transactional
-    public RequestEvent addRevision(UUID requestId, String message, UUID actorId) {
-        Request request = requestRepository.findById(requestId)
-                .orElseThrow(() -> new ResourceNotFoundException("Request not found"));
+    public RequestEvent addRevision(UUID requestId, String message, UUID actorId, UUID agencyId) {
+        Request request = loadRequest(requestId, agencyId);
 
         int current = request.getRevisionCount() != null ? request.getRevisionCount() : 0;
         request.setRevisionCount(current + 1);
@@ -108,9 +106,8 @@ public class RequestWorkflowService {
     }
 
     @Transactional
-    public RequestEvent assign(UUID requestId, UUID assigneeId, UUID actorId) {
-        Request request = requestRepository.findById(requestId)
-                .orElseThrow(() -> new ResourceNotFoundException("Request not found"));
+    public RequestEvent assign(UUID requestId, UUID assigneeId, UUID actorId, UUID agencyId) {
+        Request request = loadRequest(requestId, agencyId);
 
         request.setAssigneeId(assigneeId);
         requestRepository.save(request);
@@ -130,14 +127,20 @@ public class RequestWorkflowService {
     }
 
     @Transactional(readOnly = true)
-    public List<RequestEvent> listEvents(UUID requestId, boolean onlyVisibleToClient) {
-        if (!requestRepository.existsById(requestId)) {
-            throw new ResourceNotFoundException("Request not found");
-        }
+    public List<RequestEvent> listEvents(UUID requestId, boolean onlyVisibleToClient, UUID agencyId) {
+        loadRequest(requestId, agencyId);
         if (onlyVisibleToClient) {
             return requestEventRepository.findByRequestIdAndVisibleToClientTrueOrderByCreatedAtDesc(requestId);
         } else {
             return requestEventRepository.findByRequestIdOrderByCreatedAtDesc(requestId);
         }
+    }
+
+    private Request loadRequest(UUID requestId, UUID agencyId) {
+        if (agencyId == null) {
+            throw new IllegalArgumentException("agencyId is required");
+        }
+        return requestRepository.findByIdAndAgencyId(requestId, agencyId)
+                .orElseThrow(() -> new ResourceNotFoundException("Request not found"));
     }
 }
