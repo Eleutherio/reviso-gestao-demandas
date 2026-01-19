@@ -1,17 +1,17 @@
-# Demo/Production Profile
+# Production Profile
 
 # Forward headers from Nginx
 server:
   forward-headers-strategy: native
 
-# Database - REQUIRED (no defaults)
+# Database - REQUIRED
 spring:
   datasource:
     url: ${SPRING_DATASOURCE_URL:?SPRING_DATASOURCE_URL is required}
     username: ${SPRING_DATASOURCE_USERNAME:?SPRING_DATASOURCE_USERNAME is required}
     password: ${SPRING_DATASOURCE_PASSWORD:?SPRING_DATASOURCE_PASSWORD is required}
 
-# CORS - apenas domínio real
+# CORS - domínio real
 spring:
   web:
     cors:
@@ -49,19 +49,18 @@ spring.jpa:
   open-in-view: false
   show-sql: false
 
-# Secrets - REQUIRED (fail if missing)
+# Secrets - REQUIRED
 jwt:
   secret: ${JWT_SECRET:?JWT_SECRET is required}
 
 stripe:
-  api-key: ${STRIPE_API_KEY:}
-  webhook-secret: ${STRIPE_WEBHOOK_SECRET:}
+  api-key: ${STRIPE_API_KEY:?STRIPE_API_KEY is required}
+  webhook-secret: ${STRIPE_WEBHOOK_SECRET:?STRIPE_WEBHOOK_SECRET is required}
 
 resend:
   api-key: ${RESEND_API_KEY:?RESEND_API_KEY is required}
   from: ${RESEND_FROM:?RESEND_FROM is required}
 
-# Billing - Mock (sem Stripe)
+# Billing - Stripe real
 billing:
-  provider: mock
-  trial-days: 14
+  provider: stripe
