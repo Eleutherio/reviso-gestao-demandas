@@ -13,6 +13,8 @@ import com.guilherme.reviso_demand_manager.infra.CompanyRepository;
 import com.guilherme.reviso_demand_manager.infra.UserRepository;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -25,6 +27,8 @@ import java.util.Map;
 @RestController
 @RequestMapping("/auth")
 public class AuthController {
+
+    private static final Logger log = LoggerFactory.getLogger(AuthController.class);
 
     private final UserRepository userRepository;
     private final CompanyRepository companyRepository;
@@ -53,13 +57,18 @@ public class AuthController {
     @PostMapping("/login")
     public ResponseEntity<LoginResponseDTO> login(@Valid @RequestBody LoginRequestDTO dto,
                                                     HttpServletRequest request) {
-        // Rate limiting por IP
         String clientIp = getClientIp(request);
-        if (!rateLimitService.isAllowed("login:" + clientIp)) {
+        String normalizedEmail = normalizeEmail(dto.email());
+        
+        // Rate limiting: IP + Email
+        if (!rateLimitService.isAllowed("login:ip:" + clientIp)) {
             throw new TooManyRequestsException("Muitas tentativas de login. Aguarde 1 minuto.");
         }
+        if (!rateLimitService.isAllowed("login:email:" + normalizedEmail)) {
+            throw new TooManyRequestsException("Muitas tentativas para este email. Aguarde 1 minuto.");
+        }
 
-        User user = userRepository.findByEmailIgnoreCase(dto.email())
+        User user = userRepository.findByEmailIgnoreCase(normalizedEmail)
                 .orElseThrow(() -> new UnauthorizedException("Credenciais invalidas"));
 
         if (user.getRole() == UserRole.CLIENT_USER) {
@@ -71,10 +80,15 @@ public class AuthController {
         }
 
         if (!passwordEncoder.matches(dto.password(), user.getPasswordHash())) {
+            // Log failed attempt
+            log.warn("Failed login attempt - email: {}, ip: {}", normalizedEmail, clientIp);
             throw new UnauthorizedException("Credenciais invalidas");
         }
-        // Login bem-sucedido: reseta rate limit
-        rateLimitService.reset("login:" + clientIp);
+        
+        // Login bem-sucedido: reseta rate limits
+        rateLimitService.reset("login:ip:" + clientIp);
+        rateLimitService.reset("login:email:" + normalizedEmail);
+        log.info("Successful login - email: {}, ip: {}", normalizedEmail, clientIp);
 
         String token = jwtService.generateToken(
                 user.getId(),
@@ -101,8 +115,14 @@ public class AuthController {
     public ResponseEntity<LoginResponseDTO> loginClient(@Valid @RequestBody LoginClientRequestDTO dto,
                                                         HttpServletRequest request) {
         String clientIp = getClientIp(request);
-        if (!rateLimitService.isAllowed("login-client:" + clientIp)) {
+        String normalizedEmail = normalizeEmail(dto.email());
+        
+        // Rate limiting: IP + Email
+        if (!rateLimitService.isAllowed("login-client:ip:" + clientIp)) {
             throw new TooManyRequestsException("Muitas tentativas de login. Aguarde 1 minuto.");
+        }
+        if (!rateLimitService.isAllowed("login-client:email:" + normalizedEmail)) {
+            throw new TooManyRequestsException("Muitas tentativas para este email. Aguarde 1 minuto.");
         }
 
         String normalizedCode = normalizeCompanyCode(dto.companyCode());
@@ -110,7 +130,6 @@ public class AuthController {
             .filter(found -> found.getType() == CompanyType.CLIENT)
             .orElseThrow(() -> new UnauthorizedException("Codigo da empresa invalido"));
 
-        String normalizedEmail = normalizeEmail(dto.email());
         User user = userRepository.findByEmailIgnoreCase(normalizedEmail)
             .filter(found -> found.getRole() == UserRole.CLIENT_USER)
             .orElseThrow(() -> new UnauthorizedException("Credenciais invalidas"));
@@ -129,10 +148,17 @@ public class AuthController {
         }
 
         if (!passwordEncoder.matches(dto.password(), user.getPasswordHash())) {
+            // Log failed attempt
+            log.warn("Failed client login attempt - email: {}, company: {}, ip: {}", 
+                normalizedEmail, normalizedCode, clientIp);
             throw new UnauthorizedException("Credenciais invalidas");
         }
 
-        rateLimitService.reset("login-client:" + clientIp);
+        // Login bem-sucedido: reseta rate limits
+        rateLimitService.reset("login-client:ip:" + clientIp);
+        rateLimitService.reset("login-client:email:" + normalizedEmail);
+        log.info("Successful client login - email: {}, company: {}, ip: {}", 
+            normalizedEmail, normalizedCode, clientIp);
 
         String token = jwtService.generateToken(
             user.getId(),
