@@ -1,0 +1,62 @@
+# Demo/Production Profile
+
+# Forward headers from Nginx
+server:
+  forward-headers-strategy: native
+
+# Database - REQUIRED (no defaults)
+spring:
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:?SPRING_DATASOURCE_URL is required}
+    username: ${SPRING_DATASOURCE_USERNAME:?SPRING_DATASOURCE_USERNAME is required}
+    password: ${SPRING_DATASOURCE_PASSWORD:?SPRING_DATASOURCE_PASSWORD is required}
+
+# CORS - apenas domínio real
+spring:
+  web:
+    cors:
+      allowed-origins: 
+        - https://api.seudominio.com
+        - https://seudominio.com
+      allowed-methods: 
+        - GET
+        - POST
+        - PUT
+        - PATCH
+        - DELETE
+      allowed-headers: "*"
+      allow-credentials: true
+
+# Logging produção
+logging:
+  level:
+    root: INFO
+    com.guilherme.reviso_demand_manager: INFO
+  file:
+    name: /var/log/reviso/application.log
+    max-size: 10MB
+    max-history: 30
+
+# Actuator - apenas health e info
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+
+# JPA otimizado
+spring.jpa:
+  open-in-view: false
+  show-sql: false
+
+# Secrets - REQUIRED (fail if missing)
+jwt:
+  secret: ${JWT_SECRET:?JWT_SECRET is required}
+
+stripe:
+  api-key: ${STRIPE_API_KEY:?STRIPE_API_KEY is required}
+  webhook-secret: ${STRIPE_WEBHOOK_SECRET:?STRIPE_WEBHOOK_SECRET is required}
+
+resend:
+  api-key: ${RESEND_API_KEY:?RESEND_API_KEY is required}
+  from: ${RESEND_FROM:?RESEND_FROM is required}

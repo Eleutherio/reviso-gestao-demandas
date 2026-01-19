@@ -1,0 +1,35 @@
+# Development Profile
+
+# CORS - localhost permitido
+spring:
+  web:
+    cors:
+      allowed-origins: 
+        - http://localhost:4200
+        - http://localhost:3000
+      allowed-methods: "*"
+      allowed-headers: "*"
+      allow-credentials: true
+
+# Logging verboso
+logging:
+  level:
+    root: INFO
+    com.guilherme.reviso_demand_manager: DEBUG
+    org.springframework.web: DEBUG
+    org.hibernate.SQL: DEBUG
+    org.hibernate.type.descriptor.sql.BasicBinder: TRACE
+
+# Actuator - todos endpoints expostos (dev only)
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "*"
+
+# DevTools
+spring.devtools:
+  restart:
+    enabled: true
+  livereload:
+    enabled: true
