@@ -23,6 +23,9 @@ services:
     image: maven:3.9-eclipse-temurin-21-alpine
     container_name: reviso-backend-dev
     working_dir: /app
+    dns:
+      - 8.8.8.8
+      - 8.8.4.4
     volumes:
       - ../../backend:/app
       - reviso_m2_cache_dev:/root/.m2
