@@ -60,7 +60,11 @@ public class DefaultAgencySeeder implements ApplicationRunner {
     }
 
     private void backfillAgencyId(String table, UUID agencyId) {
-        String sql = "UPDATE " + table + " SET agency_id = ? WHERE agency_id IS NULL";
-        jdbcTemplate.update(sql, agencyId);
+        String countSql = "SELECT COUNT(*) FROM " + table + " WHERE agency_id IS NULL";
+        Integer count = jdbcTemplate.queryForObject(countSql, Integer.class);
+        if (count != null && count > 0) {
+            String sql = "UPDATE " + table + " SET agency_id = ? WHERE agency_id IS NULL";
+            jdbcTemplate.update(sql, agencyId);
+        }
     }
 }
