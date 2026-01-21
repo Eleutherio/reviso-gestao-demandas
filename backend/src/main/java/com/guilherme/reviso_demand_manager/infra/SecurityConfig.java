@@ -53,6 +53,7 @@ public class SecurityConfig {
                 // Endpoints publicos
                 .requestMatchers("/auth/**").permitAll()
                 .requestMatchers("/onboarding/**").permitAll()
+                .requestMatchers("/invites/**").permitAll()
                 .requestMatchers("/actuator/**").permitAll()
                 .requestMatchers("/", "/index.html").permitAll()
                 

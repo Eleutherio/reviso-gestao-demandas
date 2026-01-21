@@ -97,6 +97,7 @@ public class SubscriptionGuard extends OncePerRequestFilter {
     private boolean isPublicEndpoint(String path) {
         return path.startsWith("/auth/") ||
                path.startsWith("/onboarding/") ||
+               path.startsWith("/invites/") ||
                path.startsWith("/public/") ||
                path.startsWith("/actuator/");
     }
