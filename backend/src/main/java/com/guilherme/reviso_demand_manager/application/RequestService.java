@@ -102,7 +102,7 @@ public class RequestService {
                 request.getId(),
                 request.getAgencyId(),
                 request.getCompanyId(),
-                resolveCompanyName(request.getCompanyId()),
+                resolveCompanyName(request.getCompanyId(), request.getAgencyId()),
                 request.getBriefingId(),
                 request.getTitle(),
                 request.getDescription(),
@@ -123,9 +123,11 @@ public class RequestService {
                 .orElseThrow(() -> new IllegalArgumentException("Empresa nao encontrada"));
     }
 
-    private String resolveCompanyName(UUID companyId) {
-        if (companyId == null) return null;
-        return companyRepository.findById(companyId)
+    private String resolveCompanyName(UUID companyId, UUID agencyId) {
+        if (companyId == null || agencyId == null) {
+            return null;
+        }
+        return companyRepository.findByIdAndAgencyId(companyId, agencyId)
                 .map(Company::getName)
                 .orElse(null);
     }

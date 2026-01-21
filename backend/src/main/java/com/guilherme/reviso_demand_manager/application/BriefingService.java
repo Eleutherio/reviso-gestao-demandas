@@ -94,12 +94,13 @@ public class BriefingService {
 
     @Transactional(readOnly = true)
     public RequestDTO getRequestById(UUID requestId, UUID companyId, UUID agencyId) {
-        Request request = requestRepository.findById(requestId)
+        if (agencyId == null) {
+            throw new IllegalArgumentException("agencyId is required");
+        }
+        Request request = requestRepository.findByIdAndAgencyId(requestId, agencyId)
                 .orElseThrow(() -> new ResourceNotFoundException("Demanda nao encontrada"));
 
-        // Tenant isolation check
-        if (!request.getCompanyId().equals(companyId)
-            || (agencyId != null && !agencyId.equals(request.getAgencyId()))) {
+        if (!request.getCompanyId().equals(companyId)) {
             throw new ResourceNotFoundException("Demanda nao encontrada");
         }
 
@@ -108,22 +109,22 @@ public class BriefingService {
 
     @Transactional
     public RequestDTO convertBriefingToRequest(UUID briefingId, AgencyDepartment department, UUID agencyId) {
-        Briefing briefing = briefingRepository.findById(briefingId)
-                .orElseThrow(() -> new ResourceNotFoundException("Briefing não encontrado"));
-        if (agencyId != null && !agencyId.equals(briefing.getAgencyId())) {
-            throw new ResourceNotFoundException("Briefing nao encontrado");
+        if (agencyId == null) {
+            throw new IllegalArgumentException("agencyId is required");
         }
+        Briefing briefing = briefingRepository.findByIdAndAgencyId(briefingId, agencyId)
+                .orElseThrow(() -> new ResourceNotFoundException("Briefing nao encontrado"));
 
 
         if (department == null) {
-            throw new IllegalArgumentException("Departamento é obrigatório");
+            throw new IllegalArgumentException("Departamento Ã© obrigatÃ³rio");
         }
 
         if (!"PENDING".equals(briefing.getStatus())) {
             throw new IllegalStateException("Apenas briefings PENDING podem ser convertidos");
         }
 
-        // Create request from briefing
+        // Cria request a partir do briefing
         Request request = new Request();
         request.setId(UUID.randomUUID());
         request.setAgencyId(briefing.getAgencyId());
@@ -141,7 +142,7 @@ public class BriefingService {
 
         Request saved = requestRepository.save(request);
 
-        // Update briefing status
+        // Atualiza status do briefing
         briefing.setStatus("CONVERTED");
         briefingRepository.save(briefing);
 
@@ -150,11 +151,11 @@ public class BriefingService {
 
     @Transactional
     public void rejectBriefing(UUID briefingId, UUID agencyId) {
-        Briefing briefing = briefingRepository.findById(briefingId)
-                .orElseThrow(() -> new ResourceNotFoundException("Briefing não encontrado"));
-        if (agencyId != null && !agencyId.equals(briefing.getAgencyId())) {
-            throw new ResourceNotFoundException("Briefing nao encontrado");
+        if (agencyId == null) {
+            throw new IllegalArgumentException("agencyId is required");
         }
+        Briefing briefing = briefingRepository.findByIdAndAgencyId(briefingId, agencyId)
+                .orElseThrow(() -> new ResourceNotFoundException("Briefing nao encontrado"));
 
 
         if (!"PENDING".equals(briefing.getStatus())) {
@@ -170,7 +171,7 @@ public class BriefingService {
                 briefing.getId(),
                 briefing.getAgencyId(),
                 briefing.getCompanyId(),
-                resolveCompanyName(briefing.getCompanyId()),
+                resolveCompanyName(briefing.getCompanyId(), briefing.getAgencyId()),
                 briefing.getCreatedByUserId(),
                 briefing.getTitle(),
                 briefing.getDescription(),
@@ -184,7 +185,7 @@ public class BriefingService {
                 request.getId(),
                 request.getAgencyId(),
                 request.getCompanyId(),
-                resolveCompanyName(request.getCompanyId()),
+                resolveCompanyName(request.getCompanyId(), request.getAgencyId()),
                 request.getBriefingId(),
                 request.getTitle(),
                 request.getDescription(),
@@ -205,13 +206,16 @@ public class BriefingService {
                 .orElseThrow(() -> new IllegalArgumentException("Empresa nao encontrada"));
     }
 
-    private String resolveCompanyName(UUID companyId) {
-        if (companyId == null) return null;
-        return companyRepository.findById(companyId)
+    private String resolveCompanyName(UUID companyId, UUID agencyId) {
+        if (companyId == null || agencyId == null) {
+            return null;
+        }
+        return companyRepository.findByIdAndAgencyId(companyId, agencyId)
                 .map(Company::getName)
                 .orElse(null);
     }
 }
+
 
 
 

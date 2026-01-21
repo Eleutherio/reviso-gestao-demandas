@@ -9,6 +9,7 @@ import com.guilherme.reviso_demand_manager.domain.UserRole;
 import com.guilherme.reviso_demand_manager.infra.EmailSendStatus;
 import com.guilherme.reviso_demand_manager.infra.JwtService;
 import com.guilherme.reviso_demand_manager.infra.RateLimitService;
+import com.guilherme.reviso_demand_manager.infra.AgencyRepository;
 import com.guilherme.reviso_demand_manager.infra.CompanyRepository;
 import com.guilherme.reviso_demand_manager.infra.UserRepository;
 import jakarta.servlet.http.HttpServletRequest;
@@ -23,6 +24,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/auth")
@@ -37,6 +39,7 @@ public class AuthController {
     private final RateLimitService rateLimitService;
     private final CompanyCodeRecoveryService companyCodeRecoveryService;
     private final AgencyPasswordRecoveryService agencyPasswordRecoveryService;
+    private final AgencyRepository agencyRepository;
 
     public AuthController(UserRepository userRepository, 
                           CompanyRepository companyRepository,
@@ -44,7 +47,8 @@ public class AuthController {
                           JwtService jwtService,
                           RateLimitService rateLimitService,
                           CompanyCodeRecoveryService companyCodeRecoveryService,
-                          AgencyPasswordRecoveryService agencyPasswordRecoveryService) {
+                          AgencyPasswordRecoveryService agencyPasswordRecoveryService,
+                          AgencyRepository agencyRepository) {
         this.userRepository = userRepository;
         this.companyRepository = companyRepository;
         this.passwordEncoder = passwordEncoder;
@@ -52,6 +56,7 @@ public class AuthController {
         this.rateLimitService = rateLimitService;
         this.companyCodeRecoveryService = companyCodeRecoveryService;
         this.agencyPasswordRecoveryService = agencyPasswordRecoveryService;
+        this.agencyRepository = agencyRepository;
     }
 
     @PostMapping("/login")
@@ -60,7 +65,7 @@ public class AuthController {
         String clientIp = getClientIp(request);
         String normalizedEmail = normalizeEmail(dto.email());
         
-        // Rate limiting: IP + Email
+        // Limitacao de taxa: IP + Email
         if (!rateLimitService.isAllowed("login:ip:" + clientIp)) {
             throw new TooManyRequestsException("Muitas tentativas de login. Aguarde 1 minuto.");
         }
@@ -80,12 +85,17 @@ public class AuthController {
         }
 
         if (!passwordEncoder.matches(dto.password(), user.getPasswordHash())) {
-            // Log failed attempt
+            // Loga tentativa falha
             log.warn("Failed login attempt - email: {}, ip: {}", normalizedEmail, clientIp);
             throw new UnauthorizedException("Credenciais invalidas");
         }
+
+        if (!isAgencyActive(user.getAgencyId())) {
+            log.warn("Login blocked: inactive agencyId={} email={}", user.getAgencyId(), normalizedEmail);
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
         
-        // Login bem-sucedido: reseta rate limits
+        // Login bem-sucedido: reseta limites de taxa
         rateLimitService.reset("login:ip:" + clientIp);
         rateLimitService.reset("login:email:" + normalizedEmail);
         log.info("Successful login - email: {}, ip: {}", normalizedEmail, clientIp);
@@ -117,18 +127,13 @@ public class AuthController {
         String clientIp = getClientIp(request);
         String normalizedEmail = normalizeEmail(dto.email());
         
-        // Rate limiting: IP + Email
+        // Limitacao de taxa: IP + Email
         if (!rateLimitService.isAllowed("login-client:ip:" + clientIp)) {
             throw new TooManyRequestsException("Muitas tentativas de login. Aguarde 1 minuto.");
         }
         if (!rateLimitService.isAllowed("login-client:email:" + normalizedEmail)) {
             throw new TooManyRequestsException("Muitas tentativas para este email. Aguarde 1 minuto.");
         }
-
-        String normalizedCode = normalizeCompanyCode(dto.companyCode());
-        Company company = companyRepository.findByCompanyCodeIgnoreCaseAndActiveTrue(normalizedCode)
-            .filter(found -> found.getType() == CompanyType.CLIENT)
-            .orElseThrow(() -> new UnauthorizedException("Codigo da empresa invalido"));
 
         User user = userRepository.findByEmailIgnoreCase(normalizedEmail)
             .filter(found -> found.getRole() == UserRole.CLIENT_USER)
@@ -138,23 +143,36 @@ public class AuthController {
             throw new UnauthorizedException("Usuario inativo");
         }
 
-        if (user.getCompanyId() == null || !user.getCompanyId().equals(company.getId())) {
+        if (user.getCompanyId() == null || user.getAgencyId() == null) {
             throw new UnauthorizedException("Credenciais invalidas");
         }
-        if (user.getAgencyId() == null
-            || company.getAgencyId() == null
-            || !user.getAgencyId().equals(company.getAgencyId())) {
+
+        String normalizedCode = normalizeCompanyCode(dto.companyCode());
+        Company company = companyRepository.findByCompanyCodeIgnoreCaseAndAgencyId(normalizedCode, user.getAgencyId())
+            .filter(found -> found.getType() == CompanyType.CLIENT)
+            .orElseThrow(() -> new UnauthorizedException("Codigo da empresa invalido"));
+
+        if (!Boolean.TRUE.equals(company.getActive())) {
+            throw new UnauthorizedException("Codigo da empresa invalido");
+        }
+
+        if (!user.getCompanyId().equals(company.getId())) {
             throw new UnauthorizedException("Credenciais invalidas");
         }
 
         if (!passwordEncoder.matches(dto.password(), user.getPasswordHash())) {
-            // Log failed attempt
+            // Loga tentativa falha
             log.warn("Failed client login attempt - email: {}, company: {}, ip: {}", 
                 normalizedEmail, normalizedCode, clientIp);
             throw new UnauthorizedException("Credenciais invalidas");
         }
 
-        // Login bem-sucedido: reseta rate limits
+        if (!isAgencyActive(user.getAgencyId())) {
+            log.warn("Login blocked: inactive agencyId={} email={}", user.getAgencyId(), normalizedEmail);
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
+
+        // Login bem-sucedido: reseta limites de taxa
         rateLimitService.reset("login-client:ip:" + clientIp);
         rateLimitService.reset("login-client:email:" + normalizedEmail);
         log.info("Successful client login - email: {}, company: {}, ip: {}", 
@@ -303,5 +321,9 @@ public class AuthController {
     private String normalizeEmail(String rawEmail) {
         if (rawEmail == null) return "";
         return rawEmail.trim().toLowerCase(Locale.ROOT);
+    }
+
+    private boolean isAgencyActive(UUID agencyId) {
+        return agencyId != null && agencyRepository.existsByIdAndActiveTrue(agencyId);
     }
 }

@@ -1,3 +1,4 @@
+// EXPERIMENTAL (fase 2 - multi-db). Veja README.md neste pacote.
 package com.guilherme.reviso_demand_manager.infra.tenant;
 
 public class TenantContext {

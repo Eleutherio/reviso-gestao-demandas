@@ -41,7 +41,7 @@ public class UserService {
 
     @Transactional
     public UserDTO createUser(CreateUserDTO dto, UUID agencyId) {
-        // Validate email uniqueness
+        // Valida unicidade do email
         if (userRepository.findByEmail(dto.email()).isPresent()) {
             throw new IllegalArgumentException("Email já está em uso");
         }
@@ -74,7 +74,7 @@ public class UserService {
             throw new IllegalArgumentException("agencyId is required");
         }
         List<User> users = userRepository.findByAgencyId(agencyId);
-        Map<UUID, String> companyCodes = resolveCompanyCodes(users);
+        Map<UUID, String> companyCodes = resolveCompanyCodes(agencyId, users);
         return users.stream()
                 .map(user -> toDTO(user, companyCodes.get(user.getCompanyId())))
                 .toList();
@@ -138,7 +138,7 @@ public class UserService {
     }
 
     private UserDTO toDTO(User user) {
-        return toDTO(user, resolveCompanyCode(user.getCompanyId()));
+        return toDTO(user, resolveCompanyCode(user.getAgencyId(), user.getCompanyId()));
     }
 
     private Company resolveCompany(UserRole role, UUID agencyId, UUID companyId, String companyCode) {
@@ -205,17 +205,20 @@ public class UserService {
         return trimmed.toUpperCase(Locale.ROOT);
     }
 
-    private String resolveCompanyCode(UUID companyId) {
-        if (companyId == null) {
+    private String resolveCompanyCode(UUID agencyId, UUID companyId) {
+        if (agencyId == null || companyId == null) {
             return null;
         }
-        return companyRepository.findById(companyId)
+        return companyRepository.findByIdAndAgencyId(companyId, agencyId)
             .map(Company::getCompanyCode)
             .orElse(null);
     }
 
-    private Map<UUID, String> resolveCompanyCodes(List<User> users) {
+    private Map<UUID, String> resolveCompanyCodes(UUID agencyId, List<User> users) {
         Map<UUID, String> codes = new HashMap<>();
+        if (agencyId == null) {
+            return codes;
+        }
         Set<UUID> ids = new HashSet<>();
         for (User user : users) {
             UUID companyId = user.getCompanyId();
@@ -226,7 +229,7 @@ public class UserService {
         if (ids.isEmpty()) {
             return codes;
         }
-        for (Company company : companyRepository.findAllById(ids)) {
+        for (Company company : companyRepository.findByAgencyIdAndIdIn(agencyId, ids)) {
             codes.put(company.getId(), company.getCompanyCode());
         }
         return codes;

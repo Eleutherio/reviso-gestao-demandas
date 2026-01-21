@@ -33,7 +33,7 @@ public class CompanyService {
         Company company = new Company();
         company.setId(UUID.randomUUID());
         company.setAgencyId(agencyId);
-        company.setCompanyCode(generateCompanyCode(dto.name(), dto.type(), dto.segment()));
+        company.setCompanyCode(generateCompanyCode(dto.name(), dto.type(), dto.segment(), agencyId));
         company.setName(dto.name());
         company.setType(dto.type());
         company.setActive(true);
@@ -125,12 +125,12 @@ public class CompanyService {
         );
     }
 
-    private String generateCompanyCode(String name, CompanyType type, String segment) {
+    private String generateCompanyCode(String name, CompanyType type, String segment, UUID agencyId) {
         String base = buildBaseCode(name, type, segment);
         String candidate = base;
         int suffix = 1;
 
-        while (companyRepository.existsByCompanyCode(candidate)) {
+        while (companyRepository.existsByCompanyCodeAndAgencyId(candidate, agencyId)) {
             candidate = base + "-" + String.format("%02d", suffix);
             suffix++;
         }

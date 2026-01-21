@@ -24,12 +24,15 @@ public class SecurityConfig {
 
     private final JwtAuthFilter jwtAuthFilter;
     private final CorrelationIdFilter correlationIdFilter;
+    private final AgencyActiveGuard agencyActiveGuard;
 
     public SecurityConfig(
             JwtAuthFilter jwtAuthFilter,
-            CorrelationIdFilter correlationIdFilter) {
+            CorrelationIdFilter correlationIdFilter,
+            AgencyActiveGuard agencyActiveGuard) {
         this.jwtAuthFilter = jwtAuthFilter;
         this.correlationIdFilter = correlationIdFilter;
+        this.agencyActiveGuard = agencyActiveGuard;
     }
 
     @Bean
@@ -47,30 +50,34 @@ public class SecurityConfig {
                 )
             )
             .authorizeHttpRequests(auth -> auth
-                // Public endpoints
+                // Endpoints publicos
                 .requestMatchers("/auth/**").permitAll()
                 .requestMatchers("/onboarding/**").permitAll()
                 .requestMatchers("/actuator/**").permitAll()
                 .requestMatchers("/", "/index.html").permitAll()
                 
-                // Admin endpoints - only AGENCY_ADMIN
+                // Endpoints de plataforma - reservado para futuro admin master
+                .requestMatchers("/platform/**").hasRole("PLATFORM_ADMIN")
+
+                // Endpoints de admin - apenas AGENCY_ADMIN
                 .requestMatchers("/admin/**").hasRole("AGENCY_ADMIN")
                 
-                // Agency endpoints - AGENCY_ADMIN and AGENCY_USER
+                // Endpoints de agencia - AGENCY_ADMIN e AGENCY_USER
                 .requestMatchers("/agency/**").hasAnyRole("AGENCY_ADMIN", "AGENCY_USER")
                 
-                // Briefings endpoints - CLIENT_USER
+                // Endpoints de briefings - CLIENT_USER
                 .requestMatchers(HttpMethod.POST, "/briefings").hasRole("CLIENT_USER")
                 .requestMatchers(HttpMethod.GET, "/briefings/mine").hasRole("CLIENT_USER")
                 
-                // Requests endpoints - CLIENT_USER for /mine
+                // Endpoints de requests - CLIENT_USER para /mine
                 .requestMatchers(HttpMethod.GET, "/requests/mine").hasRole("CLIENT_USER")
                 
-                // All other endpoints require authentication
+                // Demais endpoints exigem autenticacao
                 .anyRequest().authenticated()
             )
             .addFilterBefore(correlationIdFilter, UsernamePasswordAuthenticationFilter.class)
-            .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
+            .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
+            .addFilterAfter(agencyActiveGuard, JwtAuthFilter.class);
 
         return http.build();
     }
