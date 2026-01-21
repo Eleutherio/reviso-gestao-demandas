@@ -10,4 +10,6 @@ import java.util.UUID;
 public interface AccessProfileRepository extends JpaRepository<AccessProfile, UUID> {
     Optional<AccessProfile> findByIdAndAgencyId(UUID id, UUID agencyId);
     List<AccessProfile> findByAgencyIdOrderByNameAsc(UUID agencyId);
+    Optional<AccessProfile> findByAgencyIdAndNameIgnoreCase(UUID agencyId, String name);
+    Optional<AccessProfile> findByAgencyIdAndIsDefaultTrue(UUID agencyId);
 }

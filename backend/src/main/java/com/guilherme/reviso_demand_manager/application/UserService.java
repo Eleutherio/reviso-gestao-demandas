@@ -47,25 +47,28 @@ public class UserService {
     public UserDTO createUser(CreateUserDTO dto, UUID agencyId) {
         // Valida unicidade do email
         if (userRepository.findByEmail(dto.email()).isPresent()) {
-            throw new IllegalArgumentException("Email já está em uso");
+            throw new IllegalArgumentException("Email ja esta em uso");
         }
 
         if (agencyId == null) {
             throw new IllegalArgumentException("agencyId is required");
         }
 
-        Company company = resolveCompany(dto.role(), agencyId, dto.companyId(), dto.companyCode());
+        Company company = null;
+        boolean companyProvided = dto.companyId() != null
+                || (dto.companyCode() != null && !dto.companyCode().isBlank());
+        if (dto.role() == UserRole.CLIENT_USER) {
+            company = resolveCompany(dto.role(), agencyId, dto.companyId(), dto.companyCode());
+        } else if (companyProvided) {
+            throw new IllegalArgumentException("companyId nao permitido para este role");
+        }
         UUID resolvedCompanyId = company != null ? company.getId() : null;
         UUID resolvedAgencyId = resolveUserAgencyId(dto.role(), agencyId, company);
-
-        UUID resolvedAccessProfileId = null;
-        if (dto.accessProfileId() != null) {
-            resolvedAccessProfileId = resolveAccessProfileId(dto.role(), dto.accessProfileId(), agencyId);
-        }
-        // invariável: só AGENCY_USER pode ter accessProfileId
-        if (dto.role() != UserRole.AGENCY_USER) {
-            resolvedAccessProfileId = null;
-        }
+        UUID resolvedAccessProfileId = resolveAccessProfileIdForCreate(
+                dto.role(),
+                dto.accessProfileId(),
+                agencyId
+        );
 
         User user = new User();
         user.setId(UUID.randomUUID());
@@ -111,7 +114,7 @@ public class UserService {
                     });
         }
 
-        // 1) aplica campos básicos
+        // 1) aplica campos basicos
         if (dto.fullName() != null) {
             user.setFullName(dto.fullName());
         }
@@ -127,7 +130,7 @@ public class UserService {
 
         Company company = null;
 
-        // 2) Company/Agency invariants
+        // 2) Regras de company/agency
         if (user.getRole() == UserRole.CLIENT_USER) {
             // Para CLIENT_USER, aceita trocar/validar company se o payload trouxe info ou role mudou
             if (roleChanged || companyProvided) {
@@ -135,14 +138,14 @@ public class UserService {
                 user.setCompanyId(company.getId());
             }
         } else {
-            // Invariável: roles != CLIENT_USER não carregam company
+            // Invariavel: roles != CLIENT_USER nao carregam company
             user.setCompanyId(null);
         }
 
         // agencyId pode depender da company quando CLIENT_USER
-        // Se o role é CLIENT_USER, precisamos de company para validar agency.
-        // Então, se role final é CLIENT_USER e não temos company resolvida aqui,
-        // buscamos pela company atual do user (pra não exigir resend no PATCH).
+        // Se o role e CLIENT_USER, precisamos de company para validar agency.
+        // Entao, se role final e CLIENT_USER e nao temos company resolvida aqui,
+        // buscamos pela company atual do user (pra nao exigir resend no PATCH).
         if (user.getRole() == UserRole.CLIENT_USER) {
             if (company == null) {
                 UUID currentCompanyId = user.getCompanyId();
@@ -156,17 +159,13 @@ public class UserService {
             user.setAgencyId(agencyId);
         }
 
-        // 3) invariável: se role != AGENCY_USER, zera accessProfileId (sem zumbi)
-        if (user.getRole() != UserRole.AGENCY_USER) {
-            user.setAccessProfileId(null);
-        } else {
-            // PATCH-friendly: só muda se vier no DTO
-            if (dto.accessProfileId() != null) {
-                UUID resolvedAccessProfileId = resolveAccessProfileId(user.getRole(), dto.accessProfileId(), agencyId);
-                user.setAccessProfileId(resolvedAccessProfileId);
-            }
-            // se dto.accessProfileId() == null: preserva o perfil atual
-        }
+        UUID resolvedAccessProfileId = resolveAccessProfileIdForUpdate(
+                user.getRole(),
+                dto.accessProfileId(),
+                user.getAccessProfileId(),
+                agencyId
+        );
+        user.setAccessProfileId(resolvedAccessProfileId);
 
         if (dto.active() != null) {
             user.setActive(dto.active());
@@ -248,12 +247,41 @@ public class UserService {
         return agencyId;
     }
 
-    private UUID resolveAccessProfileId(UserRole role, UUID accessProfileId, UUID agencyId) {
-        if (accessProfileId == null) {
+    private UUID resolveAccessProfileIdForCreate(UserRole role, UUID accessProfileId, UUID agencyId) {
+        if (role == UserRole.CLIENT_USER) {
+            if (accessProfileId != null) {
+                throw new IllegalArgumentException("CLIENT_USER nao possui accessProfileId");
+            }
             return null;
         }
-        if (role != UserRole.AGENCY_USER) {
-            throw new IllegalArgumentException("accessProfileId apenas para AGENCY_USER");
+        if (accessProfileId == null) {
+            throw new IllegalArgumentException("accessProfileId e obrigatorio para AGENCY_ADMIN e AGENCY_USER");
+        }
+        return validateAccessProfileId(role, accessProfileId, agencyId);
+    }
+
+    private UUID resolveAccessProfileIdForUpdate(UserRole role,
+                                                 UUID accessProfileId,
+                                                 UUID currentAccessProfileId,
+                                                 UUID agencyId) {
+        if (role == UserRole.CLIENT_USER) {
+            if (accessProfileId != null) {
+                throw new IllegalArgumentException("CLIENT_USER nao possui accessProfileId");
+            }
+            return null;
+        }
+        if (accessProfileId != null) {
+            return validateAccessProfileId(role, accessProfileId, agencyId);
+        }
+        if (currentAccessProfileId == null) {
+            throw new IllegalArgumentException("accessProfileId e obrigatorio para AGENCY_ADMIN e AGENCY_USER");
+        }
+        return currentAccessProfileId;
+    }
+
+    private UUID validateAccessProfileId(UserRole role, UUID accessProfileId, UUID agencyId) {
+        if (role == UserRole.CLIENT_USER) {
+            throw new IllegalArgumentException("CLIENT_USER nao possui accessProfileId");
         }
         if (agencyId == null) {
             throw new IllegalArgumentException("agencyId is required");
