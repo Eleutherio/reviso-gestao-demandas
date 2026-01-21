@@ -1,5 +1,6 @@
 package com.guilherme.reviso_demand_manager.infra;
 
+import com.guilherme.reviso_demand_manager.application.AgencyCodeGenerator;
 import com.guilherme.reviso_demand_manager.domain.Agency;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.ApplicationArguments;
@@ -54,8 +55,9 @@ public class DefaultAgencySeeder implements ApplicationRunner {
                 agency.setId(defaultAgencyId);
                 agency.setName(defaultAgencyName);
                 agency.setActive(true);
+                agency.setAgencyCode(AgencyCodeGenerator.generate(agency.getId()));
                 agency.setCreatedAt(OffsetDateTime.now(ZoneOffset.UTC));
-                return agencyRepository.save(agency).getId();
+                return agencyRepository.saveAndFlush(agency).getId();
             });
     }
 

@@ -21,6 +21,10 @@ export class LoginComponent {
   recoverMessage: string | null = null;
   recoverError: string | null = null;
   recovering = false;
+  agencyCodeRecoverVisible = false;
+  agencyCodeRecoverMessage: string | null = null;
+  agencyCodeRecoverError: string | null = null;
+  agencyCodeRecovering = false;
   agencyRecoverVisible = false;
   agencyRecoverMessage: string | null = null;
   agencyRecoverError: string | null = null;
@@ -31,6 +35,7 @@ export class LoginComponent {
 
   readonly loginForm;
   readonly recoverForm;
+  readonly agencyCodeRecoverForm;
   readonly agencyRecoverForm;
   readonly agencyResetForm;
 
@@ -41,10 +46,14 @@ export class LoginComponent {
   ) {
     this.loginForm = this.fb.group({
       email: [''],
+      agencyCode: [''],
       companyCode: [''],
       password: ['', [Validators.required]],
     });
     this.recoverForm = this.fb.group({
+      email: ['', [Validators.required, Validators.email]],
+    });
+    this.agencyCodeRecoverForm = this.fb.group({
       email: ['', [Validators.required, Validators.email]],
     });
     this.agencyRecoverForm = this.fb.group({
@@ -71,6 +80,10 @@ export class LoginComponent {
     this.recoverError = null;
     this.recoverVisible = false;
     this.recoverForm.reset();
+    this.agencyCodeRecoverMessage = null;
+    this.agencyCodeRecoverError = null;
+    this.agencyCodeRecoverVisible = false;
+    this.agencyCodeRecoverForm.reset();
     this.agencyRecoverMessage = null;
     this.agencyRecoverError = null;
     this.agencyRecoverVisible = false;
@@ -86,6 +99,13 @@ export class LoginComponent {
     this.recoverMessage = null;
     this.recoverError = null;
     this.recoverForm.reset();
+  }
+
+  toggleAgencyCodeRecover(): void {
+    this.agencyCodeRecoverVisible = !this.agencyCodeRecoverVisible;
+    this.agencyCodeRecoverMessage = null;
+    this.agencyCodeRecoverError = null;
+    this.agencyCodeRecoverForm.reset();
   }
 
   toggleAgencyRecover(): void {
@@ -108,6 +128,7 @@ export class LoginComponent {
     }
 
     const email = this.loginForm.value.email ?? '';
+    const agencyCode = this.loginForm.value.agencyCode ?? '';
     const companyCode = this.loginForm.value.companyCode ?? '';
     const password = this.loginForm.value.password ?? '';
 
@@ -115,7 +136,7 @@ export class LoginComponent {
     this.loginForm.disable();
     const login$ =
       this.portal === 'agency'
-        ? this.auth.login(email, password)
+        ? this.auth.login(email, password, agencyCode)
         : this.auth.loginClient(companyCode, email, password);
 
     login$
@@ -151,6 +172,9 @@ export class LoginComponent {
         if (normalized.includes('codigo da empresa')) {
           return 'Codigo da empresa invalido.';
         }
+        if (normalized.includes('codigo da agencia')) {
+          return 'Codigo da agencia invalido.';
+        }
         if (normalized.includes('credenciais')) {
           return this.portal === 'client'
             ? 'Codigo da empresa, email ou senha invalidos.'
@@ -167,7 +191,7 @@ export class LoginComponent {
       if (err.status === 400 || err.status === 401) {
         return this.portal === 'client'
           ? 'Codigo da empresa, email ou senha invalidos.'
-          : 'Email ou senha invalidos.';
+          : 'Email, codigo da agencia ou senha invalidos.';
       }
       if (err.status === 403) {
         return 'Seu acesso nao esta permitido. Fale com o administrador.';
@@ -222,6 +246,45 @@ export class LoginComponent {
         },
         error: (err: unknown) => {
           this.recoverError = this.resolveRecoverError(err);
+        },
+      });
+  }
+
+  recoverAgencyCode(): void {
+    this.agencyCodeRecoverMessage = null;
+    this.agencyCodeRecoverError = null;
+
+    if (this.agencyCodeRecoverForm.invalid) {
+      const emailCtrl = this.agencyCodeRecoverForm.get('email');
+      if (emailCtrl?.hasError('required')) {
+        this.agencyCodeRecoverError = 'Informe seu email.';
+      } else if (emailCtrl?.hasError('email')) {
+        this.agencyCodeRecoverError = 'Informe um email valido.';
+      } else {
+        this.agencyCodeRecoverError = 'Preencha o email para continuar.';
+      }
+      this.agencyCodeRecoverForm.markAllAsTouched();
+      return;
+    }
+
+    const email = this.agencyCodeRecoverForm.value.email ?? '';
+    this.agencyCodeRecovering = true;
+    this.agencyCodeRecoverForm.disable();
+    this.auth
+      .recoverAgencyCode(email)
+      .pipe(
+        finalize(() => {
+          this.agencyCodeRecovering = false;
+          this.agencyCodeRecoverForm.enable();
+        })
+      )
+      .subscribe({
+        next: (res) => {
+          this.agencyCodeRecoverMessage =
+            res?.message ?? 'Se o email estiver ativo, enviaremos o codigo.';
+        },
+        error: (err: unknown) => {
+          this.agencyCodeRecoverError = this.resolveRecoverError(err);
         },
       });
   }
@@ -300,32 +363,38 @@ export class LoginComponent {
 
   private applyPortalValidators(): void {
     const emailCtrl = this.loginForm.get('email');
+    const agencyCodeCtrl = this.loginForm.get('agencyCode');
     const companyCodeCtrl = this.loginForm.get('companyCode');
     const passwordCtrl = this.loginForm.get('password');
 
     if (this.portal === 'agency') {
       emailCtrl?.setValidators([Validators.required, Validators.email]);
+      agencyCodeCtrl?.setValidators([Validators.required]);
       companyCodeCtrl?.clearValidators();
     } else {
       companyCodeCtrl?.setValidators([Validators.required]);
       emailCtrl?.setValidators([Validators.required, Validators.email]);
+      agencyCodeCtrl?.clearValidators();
     }
 
     passwordCtrl?.setValidators([Validators.required]);
 
     emailCtrl?.updateValueAndValidity({ emitEvent: false });
+    agencyCodeCtrl?.updateValueAndValidity({ emitEvent: false });
     companyCodeCtrl?.updateValueAndValidity({ emitEvent: false });
     passwordCtrl?.updateValueAndValidity({ emitEvent: false });
   }
 
   private resolveLoginValidationError(): string {
     const emailCtrl = this.loginForm.get('email');
+    const agencyCodeCtrl = this.loginForm.get('agencyCode');
     const companyCodeCtrl = this.loginForm.get('companyCode');
     const passwordCtrl = this.loginForm.get('password');
 
     if (this.portal === 'agency') {
       if (emailCtrl?.hasError('required')) return 'Informe seu email.';
       if (emailCtrl?.hasError('email')) return 'Informe um email valido.';
+      if (agencyCodeCtrl?.hasError('required')) return 'Informe o codigo da agencia.';
     } else {
       if (companyCodeCtrl?.hasError('required')) return 'Informe o codigo da empresa.';
       if (emailCtrl?.hasError('required')) return 'Informe seu email.';

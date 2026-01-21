@@ -1,7 +1,9 @@
 package com.guilherme.reviso_demand_manager.web;
 
+import com.guilherme.reviso_demand_manager.application.AgencyCodeRecoveryService;
 import com.guilherme.reviso_demand_manager.application.AgencyPasswordRecoveryService;
 import com.guilherme.reviso_demand_manager.application.CompanyCodeRecoveryService;
+import com.guilherme.reviso_demand_manager.domain.Agency;
 import com.guilherme.reviso_demand_manager.domain.Company;
 import com.guilherme.reviso_demand_manager.domain.CompanyType;
 import com.guilherme.reviso_demand_manager.domain.User;
@@ -38,6 +40,7 @@ public class AuthController {
     private final JwtService jwtService;
     private final RateLimitService rateLimitService;
     private final CompanyCodeRecoveryService companyCodeRecoveryService;
+    private final AgencyCodeRecoveryService agencyCodeRecoveryService;
     private final AgencyPasswordRecoveryService agencyPasswordRecoveryService;
     private final AgencyRepository agencyRepository;
 
@@ -47,6 +50,7 @@ public class AuthController {
                           JwtService jwtService,
                           RateLimitService rateLimitService,
                           CompanyCodeRecoveryService companyCodeRecoveryService,
+                          AgencyCodeRecoveryService agencyCodeRecoveryService,
                           AgencyPasswordRecoveryService agencyPasswordRecoveryService,
                           AgencyRepository agencyRepository) {
         this.userRepository = userRepository;
@@ -55,6 +59,7 @@ public class AuthController {
         this.jwtService = jwtService;
         this.rateLimitService = rateLimitService;
         this.companyCodeRecoveryService = companyCodeRecoveryService;
+        this.agencyCodeRecoveryService = agencyCodeRecoveryService;
         this.agencyPasswordRecoveryService = agencyPasswordRecoveryService;
         this.agencyRepository = agencyRepository;
     }
@@ -64,6 +69,7 @@ public class AuthController {
                                                     HttpServletRequest request) {
         String clientIp = getClientIp(request);
         String normalizedEmail = normalizeEmail(dto.email());
+        String normalizedAgencyCode = normalizeAgencyCode(dto.agencyCode());
         
         // Limitacao de taxa: IP + Email
         if (!rateLimitService.isAllowed("login:ip:" + clientIp)) {
@@ -82,6 +88,16 @@ public class AuthController {
 
         if (!user.getActive()) {
             throw new UnauthorizedException("Usuario inativo");
+        }
+
+        if (user.getAgencyId() == null) {
+            throw new UnauthorizedException("Credenciais invalidas");
+        }
+
+        Agency agency = agencyRepository.findById(user.getAgencyId())
+            .orElseThrow(() -> new UnauthorizedException("Codigo da agencia invalido"));
+        if (!normalizeAgencyCode(agency.getAgencyCode()).equals(normalizedAgencyCode)) {
+            throw new UnauthorizedException("Codigo da agencia invalido");
         }
 
         if (!passwordEncoder.matches(dto.password(), user.getPasswordHash())) {
@@ -235,6 +251,42 @@ public class AuthController {
         return ResponseEntity.ok(response);
     }
 
+    @PostMapping("/recover-agency-code")
+    public ResponseEntity<Map<String, Object>> recoverAgencyCode(
+        @Valid @RequestBody RecoverAgencyCodeRequestDTO dto,
+        HttpServletRequest request
+    ) {
+        String clientIp = getClientIp(request);
+        String normalizedEmail = normalizeEmail(dto.email());
+        if (!rateLimitService.isAllowed("recover-agency-code:ip:" + clientIp)
+            || !rateLimitService.isAllowed("recover-agency-code:email:" + normalizedEmail)) {
+            throw new TooManyRequestsException("Muitas tentativas. Aguarde 1 minuto.");
+        }
+        EmailSendStatus status = agencyCodeRecoveryService.sendRecoveryEmail(dto.email());
+
+        Map<String, Object> response = new HashMap<>();
+        if (status == EmailSendStatus.QUOTA) {
+            response.put("status", HttpStatus.ACCEPTED.value());
+            response.put("message", "Limite de envio atingido. Seu pedido foi registrado e sera enviado em breve.");
+            return ResponseEntity.status(HttpStatus.ACCEPTED).body(response);
+        }
+        if (status == EmailSendStatus.RETRY) {
+            response.put("status", HttpStatus.ACCEPTED.value());
+            response.put("message", "Estamos com instabilidade no envio. Seu pedido foi registrado.");
+            return ResponseEntity.status(HttpStatus.ACCEPTED).body(response);
+        }
+        if (status == EmailSendStatus.FAILED) {
+            response.put("status", HttpStatus.INTERNAL_SERVER_ERROR.value());
+            response.put("error", "Falha ao enviar email");
+            response.put("message", "Nao foi possivel enviar o email de recuperacao.");
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
+        }
+
+        response.put("status", HttpStatus.OK.value());
+        response.put("message", "Se o email estiver ativo, enviaremos o codigo da agencia.");
+        return ResponseEntity.ok(response);
+    }
+
     @PostMapping("/recover-agency-password")
     public ResponseEntity<Map<String, Object>> recoverAgencyPassword(
         @Valid @RequestBody RecoverAgencyPasswordRequestDTO dto,
@@ -314,6 +366,11 @@ public class AuthController {
     }
 
     private String normalizeCompanyCode(String rawCode) {
+        if (rawCode == null) return "";
+        return rawCode.trim().toUpperCase(Locale.ROOT);
+    }
+
+    private String normalizeAgencyCode(String rawCode) {
         if (rawCode == null) return "";
         return rawCode.trim().toUpperCase(Locale.ROOT);
     }

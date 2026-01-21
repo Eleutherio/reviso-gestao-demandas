@@ -23,6 +23,7 @@ public class MockBillingService implements BillingService {
     private final UserRepository userRepository;
     private final SubscriptionRepository subscriptionRepository;
     private final SubscriptionPlanRepository planRepository;
+    private final AccessProfileService accessProfileService;
     private final PasswordEncoder passwordEncoder;
     private final EmailOutboxService emailService;
     private final BillingConfig billingConfig;
@@ -33,6 +34,7 @@ public class MockBillingService implements BillingService {
             UserRepository userRepository,
             SubscriptionRepository subscriptionRepository,
             SubscriptionPlanRepository planRepository,
+            AccessProfileService accessProfileService,
             PasswordEncoder passwordEncoder,
             EmailOutboxService emailService,
             BillingConfig billingConfig
@@ -42,6 +44,7 @@ public class MockBillingService implements BillingService {
         this.userRepository = userRepository;
         this.subscriptionRepository = subscriptionRepository;
         this.planRepository = planRepository;
+        this.accessProfileService = accessProfileService;
         this.passwordEncoder = passwordEncoder;
         this.emailService = emailService;
         this.billingConfig = billingConfig;
@@ -69,6 +72,7 @@ public class MockBillingService implements BillingService {
         agency.setId(UUID.randomUUID());
         agency.setName(agencyName);
         agency.setActive(true); // Ativo imediatamente
+        agency.setAgencyCode(AgencyCodeGenerator.generate(agency.getId()));
         agency.setCreatedAt(OffsetDateTime.now());
         agencyRepository.save(agency);
 
@@ -84,6 +88,8 @@ public class MockBillingService implements BillingService {
         company.setCreatedAt(OffsetDateTime.now());
         companyRepository.save(company);
 
+        var defaultProfile = accessProfileService.ensureDefaultProfile(agency.getId());
+
         var admin = new User();
         admin.setId(UUID.randomUUID());
         admin.setFullName(adminEmail.split("@")[0]);
@@ -92,6 +98,7 @@ public class MockBillingService implements BillingService {
         admin.setRole(UserRole.AGENCY_ADMIN);
         admin.setAgencyId(agency.getId());
         admin.setCompanyId(company.getId());
+        admin.setAccessProfileId(defaultProfile.getId());
         admin.setActive(true);
         admin.setCreatedAt(OffsetDateTime.now());
         userRepository.save(admin);
@@ -109,7 +116,7 @@ public class MockBillingService implements BillingService {
         emailService.enqueueAndSend(new EmailMessage(
                 adminEmail,
                 "Bem-vindo ao Reviso!",
-                "Olá! Sua agência " + agencyName + " foi criada com sucesso.\n\nTrial: " + billingConfig.getTrialDays() + " dias\n\nAcesse: " + successUrl.split("\\?")[0] + "\nEmail: " + adminEmail
+                "Ola! Sua agencia " + agencyName + " foi criada com sucesso.\n\nTrial: " + billingConfig.getTrialDays() + " dias\n\nAcesse: " + successUrl.split("\\?")[0] + "\nEmail: " + adminEmail
         ));
 
         log.info("Mock billing: agency provisioned agencyId={}, trial={}days", agency.getId(), billingConfig.getTrialDays());
@@ -120,7 +127,7 @@ public class MockBillingService implements BillingService {
 
     @Override
     public void onPaymentConfirmed(String subscriptionId, String customerId) {
-        // Mock não tem pagamento
+        // Mock nao tem pagamento
         log.debug("Mock billing: onPaymentConfirmed ignored (no payment in mock)");
     }
 

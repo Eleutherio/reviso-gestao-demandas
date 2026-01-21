@@ -21,6 +21,9 @@ public class Agency {
     @Column(nullable = false)
     private Boolean active;
 
+    @Column(name = "agency_code", nullable = false, length = 32, unique = true)
+    private String agencyCode;
+
     @Column(name = "created_at", nullable = false)
     private OffsetDateTime createdAt;
 
@@ -49,6 +52,14 @@ public class Agency {
 
     public void setActive(Boolean active) {
         this.active = active;
+    }
+
+    public String getAgencyCode() {
+        return agencyCode;
+    }
+
+    public void setAgencyCode(String agencyCode) {
+        this.agencyCode = agencyCode;
     }
 
     public OffsetDateTime getCreatedAt() {

@@ -27,8 +27,8 @@ export class AuthService {
 
   constructor(private readonly http: HttpClient) {}
 
-  login(email: string, password: string): Observable<void> {
-    return this.http.post<LoginResponse>('/api/auth/login', { email, password }).pipe(
+  login(email: string, password: string, agencyCode: string): Observable<void> {
+    return this.http.post<LoginResponse>('/api/auth/login', { email, password, agencyCode }).pipe(
       tap((res) => this.persistLogin(res)),
       map(() => void 0)
     );
@@ -45,6 +45,10 @@ export class AuthService {
 
   recoverCompanyCode(email: string): Observable<{ message?: string }> {
     return this.http.post<{ message?: string }>('/api/auth/recover-company-code', { email });
+  }
+
+  recoverAgencyCode(email: string): Observable<{ message?: string }> {
+    return this.http.post<{ message?: string }>('/api/auth/recover-agency-code', { email });
   }
 
   recoverAgencyPassword(email: string): Observable<{ message?: string }> {

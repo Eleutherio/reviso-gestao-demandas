@@ -27,6 +27,11 @@
         <input class="field__input" type="email" formControlName="email" autocomplete="username" />
       </label>
 
+      <label class="field" *ngIf="portal === 'agency'">
+        <span class="field__label">Codigo da agencia</span>
+        <input class="field__input" type="text" formControlName="agencyCode" autocomplete="off" />
+      </label>
+
       <label class="field" *ngIf="portal === 'client'">
         <span class="field__label">Codigo da empresa</span>
         <input class="field__input" type="text" formControlName="companyCode" autocomplete="off" />
@@ -67,6 +72,36 @@
 
       <div class="success login__hint" *ngIf="recoverMessage">{{ recoverMessage }}</div>
       <div class="error login__hint" *ngIf="recoverError">{{ recoverError }}</div>
+    </div>
+
+    <div class="login__recover" *ngIf="portal === 'agency'">
+      <button class="link" type="button" (click)="toggleAgencyCodeRecover()">
+        Nao sei meu codigo da agencia
+      </button>
+
+      <div class="login__recover-form" *ngIf="agencyCodeRecoverVisible">
+        <form
+          [formGroup]="agencyCodeRecoverForm"
+          (ngSubmit)="recoverAgencyCode()"
+          class="login__form"
+        >
+          <label class="field">
+            <span class="field__label">Email</span>
+            <input class="field__input" type="email" formControlName="email" autocomplete="email" />
+          </label>
+
+          <button class="btn btn--ghost" type="submit" [disabled]="agencyCodeRecovering">
+            {{ agencyCodeRecovering ? 'Enviando...' : 'Enviar codigo' }}
+          </button>
+        </form>
+      </div>
+
+      <div class="success login__hint" *ngIf="agencyCodeRecoverMessage">
+        {{ agencyCodeRecoverMessage }}
+      </div>
+      <div class="error login__hint" *ngIf="agencyCodeRecoverError">
+        {{ agencyCodeRecoverError }}
+      </div>
     </div>
 
     <div class="login__recover" *ngIf="portal === 'agency'">

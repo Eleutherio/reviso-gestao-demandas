@@ -18,10 +18,16 @@ public class AgencyService {
 
     private final AgencyRepository agencyRepository;
     private final UserRepository userRepository;
+    private final AccessProfileService accessProfileService;
 
-    public AgencyService(AgencyRepository agencyRepository, UserRepository userRepository) {
+    public AgencyService(
+            AgencyRepository agencyRepository,
+            UserRepository userRepository,
+            AccessProfileService accessProfileService
+    ) {
         this.agencyRepository = agencyRepository;
         this.userRepository = userRepository;
+        this.accessProfileService = accessProfileService;
     }
 
     @Transactional
@@ -37,10 +43,13 @@ public class AgencyService {
         agency.setId(UUID.randomUUID());
         agency.setName(dto.name());
         agency.setActive(true);
+        agency.setAgencyCode(AgencyCodeGenerator.generate(agency.getId()));
         agency.setCreatedAt(OffsetDateTime.now());
 
         Agency saved = agencyRepository.save(agency);
+        var defaultProfile = accessProfileService.ensureDefaultProfile(saved.getId());
         user.setAgencyId(saved.getId());
+        user.setAccessProfileId(defaultProfile.getId());
         userRepository.save(user);
 
         return toDTO(saved);

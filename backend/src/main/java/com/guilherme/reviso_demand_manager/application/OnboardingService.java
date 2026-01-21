@@ -22,6 +22,7 @@ public class OnboardingService {
     private final SubscriptionRepository subscriptionRepository;
     private final SubscriptionPlanRepository planRepository;
     private final PendingSignupRepository pendingSignupRepository;
+    private final AccessProfileService accessProfileService;
     private final PasswordEncoder passwordEncoder;
     private final EmailOutboxService emailService;
     private final StripeClient stripeClient;
@@ -34,6 +35,7 @@ public class OnboardingService {
             SubscriptionRepository subscriptionRepository,
             SubscriptionPlanRepository planRepository,
             PendingSignupRepository pendingSignupRepository,
+            AccessProfileService accessProfileService,
             PasswordEncoder passwordEncoder,
             EmailOutboxService emailService,
             StripeClient stripeClient,
@@ -45,6 +47,7 @@ public class OnboardingService {
         this.subscriptionRepository = subscriptionRepository;
         this.planRepository = planRepository;
         this.pendingSignupRepository = pendingSignupRepository;
+        this.accessProfileService = accessProfileService;
         this.passwordEncoder = passwordEncoder;
         this.emailService = emailService;
         this.stripeClient = stripeClient;
@@ -73,10 +76,10 @@ public class OnboardingService {
             throw new IllegalArgumentException("Plan is not properly configured");
         }
 
-        // Hash password IMMEDIATELY (never send to Stripe)
+        // Gera hash da senha imediatamente (nunca enviar ao Stripe)
         var passwordHash = passwordEncoder.encode(adminPassword);
 
-        // Metadata: NO PASSWORD (secure)
+        // Metadados: sem senha (seguro)
         var metadata = Map.of(
                 "plan_id", planId.toString(),
                 "agency_name", agencyName,
@@ -86,7 +89,7 @@ public class OnboardingService {
         var sessionJson = stripeClient.createCheckoutSession(plan.getStripePriceId(), successUrl, cancelUrl, metadata);
         var checkoutSessionId = extractSessionIdFromJson(sessionJson);
 
-        // Store password hash locally (secure)
+        // Guarda hash da senha localmente (seguro)
         var pendingSignup = new PendingSignup();
         pendingSignup.setId(UUID.randomUUID());
         pendingSignup.setCheckoutSessionId(checkoutSessionId);
@@ -113,7 +116,8 @@ public class OnboardingService {
         var agency = new Agency();
         agency.setId(UUID.randomUUID());
         agency.setName(agencyName);
-        agency.setActive(true); // Ativo imediatamente (trial)
+        agency.setActive(true); // Ativo imediatamente (teste)
+        agency.setAgencyCode(AgencyCodeGenerator.generate(agency.getId()));
         agency.setCreatedAt(OffsetDateTime.now());
         agencyRepository.save(agency);
 
@@ -129,6 +133,8 @@ public class OnboardingService {
         company.setCreatedAt(OffsetDateTime.now());
         companyRepository.save(company);
 
+        var defaultProfile = accessProfileService.ensureDefaultProfile(agency.getId());
+
         var admin = new User();
         admin.setId(UUID.randomUUID());
         admin.setFullName(adminEmail.split("@")[0]);
@@ -137,6 +143,7 @@ public class OnboardingService {
         admin.setRole(UserRole.AGENCY_ADMIN);
         admin.setAgencyId(agency.getId());
         admin.setCompanyId(company.getId());
+        admin.setAccessProfileId(defaultProfile.getId());
         admin.setActive(true);
         admin.setCreatedAt(OffsetDateTime.now());
         userRepository.save(admin);
@@ -145,7 +152,7 @@ public class OnboardingService {
         subscription.setId(UUID.randomUUID());
         subscription.setAgencyId(agency.getId());
         subscription.setPlanId(planId);
-        subscription.setStatus(SubscriptionStatus.TRIALING); // Trial mock
+        subscription.setStatus(SubscriptionStatus.TRIALING); // Teste simulado
         subscription.setCurrentPeriodStart(OffsetDateTime.now());
         subscription.setCurrentPeriodEnd(OffsetDateTime.now().plusDays(billingConfig.getTrialDays()));
         subscription.setCreatedAt(OffsetDateTime.now());
@@ -154,7 +161,7 @@ public class OnboardingService {
         emailService.enqueueAndSend(new EmailMessage(
                 adminEmail,
                 "Bem-vindo ao Reviso!",
-                "Olá! Sua agência " + agencyName + " foi criada com sucesso.\n\nAcesse: http://localhost:4200\nEmail: " + adminEmail
+                "Ola! Sua agencia " + agencyName + " foi criada com sucesso.\n\nAcesse: http://localhost:4200\nEmail: " + adminEmail
         ));
 
         log.info("Mock agency provisioned: agencyId={}", agency.getId());
@@ -185,21 +192,21 @@ public class OnboardingService {
         log.info("Provisioning agency: subscription={}, checkoutSession={}", 
                 maskSensitive(stripeSubscriptionId), maskSensitive(checkoutSessionId));
 
-        // Idempotency: check by subscription_id
+        // Idempotencia: verifica por subscription_id
         var existingBySub = subscriptionRepository.findByStripeSubscriptionId(stripeSubscriptionId);
         if (existingBySub.isPresent()) {
             log.info("Agency already provisioned (by subscription): agencyId={}", existingBySub.get().getAgencyId());
             return existingBySub.get().getAgencyId();
         }
 
-        // Idempotency: check by checkout_session_id
+        // Idempotencia: verifica por checkout_session_id
         var existingByCheckout = subscriptionRepository.findByStripeCheckoutSessionId(checkoutSessionId);
         if (existingByCheckout.isPresent()) {
             log.info("Agency already provisioned (by checkout): agencyId={}", existingByCheckout.get().getAgencyId());
             return existingByCheckout.get().getAgencyId();
         }
 
-        // Retrieve password hash from local storage (secure)
+        // Recupera hash da senha do armazenamento local (seguro)
         var pendingSignup = pendingSignupRepository.findByCheckoutSessionId(checkoutSessionId)
                 .orElseThrow(() -> new IllegalArgumentException("Pending signup not found"));
 
@@ -213,6 +220,7 @@ public class OnboardingService {
             agency.setId(UUID.randomUUID());
             agency.setName(pendingSignup.getAgencyName());
             agency.setActive(false);
+            agency.setAgencyCode(AgencyCodeGenerator.generate(agency.getId()));
             agency.setCreatedAt(OffsetDateTime.now());
             agencyRepository.save(agency);
             log.debug("Agency created: id={}", agency.getId());
@@ -230,14 +238,17 @@ public class OnboardingService {
             companyRepository.save(company);
             log.debug("Company created: id={}", company.getId());
 
+            var defaultProfile = accessProfileService.ensureDefaultProfile(agency.getId());
+
             var admin = new User();
             admin.setId(UUID.randomUUID());
             admin.setFullName(pendingSignup.getAdminEmail().split("@")[0]);
             admin.setEmail(pendingSignup.getAdminEmail());
-            admin.setPasswordHash(pendingSignup.getPasswordHash()); // Use stored hash
+            admin.setPasswordHash(pendingSignup.getPasswordHash()); // Usa hash armazenado
             admin.setRole(UserRole.AGENCY_ADMIN);
             admin.setAgencyId(agency.getId());
             admin.setCompanyId(company.getId());
+            admin.setAccessProfileId(defaultProfile.getId());
             admin.setActive(true);
             admin.setCreatedAt(OffsetDateTime.now());
             userRepository.save(admin);
@@ -255,7 +266,7 @@ public class OnboardingService {
             subscriptionRepository.save(subscription);
             log.debug("Subscription created: id={}", subscription.getId());
 
-            // Cleanup: delete pending signup
+            // Limpeza: remove signup pendente
             pendingSignupRepository.delete(pendingSignup);
 
             log.info("Agency provisioned successfully: agencyId={}, subscription={}", 
@@ -289,7 +300,7 @@ public class OnboardingService {
         var subscription = subscriptionRepository.findByStripeSubscriptionId(stripeSubscriptionId)
                 .orElseThrow(() -> new IllegalArgumentException("Subscription not found"));
 
-        // Validate customer matches (prevent activation by wrong invoice)
+        // Valida cliente (evita ativacao por fatura errada)
         if (!subscription.getStripeCustomerId().equals(stripeCustomerId)) {
             log.error("Customer mismatch: expected={}, got={}", 
                     maskSensitive(subscription.getStripeCustomerId()), maskSensitive(stripeCustomerId));
@@ -314,7 +325,7 @@ public class OnboardingService {
             emailService.enqueueAndSend(new EmailMessage(
                     company.getContactEmail(),
                     "Bem-vindo ao Reviso!",
-                    "Olá! Sua agência " + agency.getName() + " foi criada com sucesso.\n\nAcesse: http://localhost:4200\nEmail: " + company.getContactEmail()
+                    "Ola! Sua agencia " + agency.getName() + " foi criada com sucesso.\n\nAcesse: http://localhost:4200\nEmail: " + company.getContactEmail()
             ));
 
             log.info("Agency activated successfully: agencyId={}, subscription={}", 
@@ -365,7 +376,7 @@ public class OnboardingService {
         var agency = agencyRepository.findById(subscription.getAgencyId())
                 .orElseThrow(() -> new IllegalArgumentException("Agency not found"));
         
-        // Keep active during grace period (Stripe handles retries)
+        // Mantem ativo durante carencia (Stripe faz as tentativas)
         log.info("Payment failed: agencyId={}, subscription={}, status=PAST_DUE", 
                 agency.getId(), maskSensitive(stripeSubscriptionId));
     }
