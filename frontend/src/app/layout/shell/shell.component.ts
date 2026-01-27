@@ -29,8 +29,11 @@ export class ShellComponent implements OnInit, OnDestroy {
   private readonly inatividadeMs = 15 * 60 * 1000;
   private readonly logoutMs = 20 * 60 * 1000;
   private readonly throttleAtividadeMs = 1000;
+  private readonly presencePingMs = 60000;
   private readonly eventosAtividade = ['mousemove', 'keydown', 'scroll', 'touchstart', 'wheel'];
   private readonly handleAtividade = () => this.registrarAtividade(false);
+  private presenceIntervalId: number | null = null;
+  private lastPresencePingAt = 0;
   private readonly roleLabels: Record<UserRole, string> = {
     AGENCY_ADMIN: 'Administrador',
     AGENCY_USER: 'colaborador',
@@ -95,11 +98,13 @@ export class ShellComponent implements OnInit, OnDestroy {
     this.ultimaAtividadeEm = Date.now();
     this.vincularEventosAtividade();
     this.iniciarMonitorInatividade();
+    this.iniciarPresence();
   }
 
   ngOnDestroy(): void {
     this.pararMonitorInatividade();
     this.removerEventosAtividade();
+    this.pararPresence();
   }
 
   continuarSessao(): void {
@@ -140,6 +145,9 @@ export class ShellComponent implements OnInit, OnDestroy {
     if (this.bannerVisivel) {
       this.bannerVisivel = false;
     }
+    if (agora - this.lastPresencePingAt >= this.presencePingMs / 2) {
+      this.enviarPresence();
+    }
   }
 
   private atualizarInatividade(): void {
@@ -172,6 +180,30 @@ export class ShellComponent implements OnInit, OnDestroy {
     this.auth.logout();
     this.pararMonitorInatividade();
     this.removerEventosAtividade();
+    this.pararPresence();
     this.router.navigateByUrl('/login');
+  }
+
+  private iniciarPresence(): void {
+    if (!this.auth.isLoggedIn()) return;
+    this.enviarPresence();
+    this.presenceIntervalId = window.setInterval(() => this.enviarPresence(), this.presencePingMs);
+  }
+
+  private pararPresence(): void {
+    if (this.presenceIntervalId !== null) {
+      window.clearInterval(this.presenceIntervalId);
+      this.presenceIntervalId = null;
+    }
+  }
+
+  private enviarPresence(): void {
+    if (!this.auth.isLoggedIn()) return;
+    this.lastPresencePingAt = Date.now();
+    this.auth.pingPresence().subscribe({
+      error: () => {
+        // presença é best-effort; evita ruído no console
+      },
+    });
   }
 }

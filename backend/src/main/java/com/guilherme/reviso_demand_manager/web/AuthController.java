@@ -23,6 +23,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.OffsetDateTime;
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
@@ -116,6 +117,11 @@ public class AuthController {
         rateLimitService.reset("login:email:" + normalizedEmail);
         log.info("Successful login - email: {}, ip: {}", normalizedEmail, clientIp);
 
+        OffsetDateTime now = OffsetDateTime.now();
+        user.setLastLoginAt(now);
+        user.setLastSeenAt(now);
+        userRepository.save(user);
+
         String token = jwtService.generateToken(
                 user.getId(),
                 user.getEmail(),
@@ -193,6 +199,11 @@ public class AuthController {
         rateLimitService.reset("login-client:email:" + normalizedEmail);
         log.info("Successful client login - email: {}, company: {}, ip: {}", 
             normalizedEmail, normalizedCode, clientIp);
+
+        OffsetDateTime now = OffsetDateTime.now();
+        user.setLastLoginAt(now);
+        user.setLastSeenAt(now);
+        userRepository.save(user);
 
         String token = jwtService.generateToken(
             user.getId(),

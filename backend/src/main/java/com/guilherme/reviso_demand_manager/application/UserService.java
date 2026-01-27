@@ -196,7 +196,9 @@ public class UserService {
                 user.getAccessProfileId(),
                 companyCode,
                 user.getActive(),
-                user.getCreatedAt()
+                user.getCreatedAt(),
+                user.getLastLoginAt(),
+                user.getLastSeenAt()
         );
     }
 

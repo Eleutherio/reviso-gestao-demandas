@@ -14,7 +14,9 @@ public record UserDTO(
     UUID accessProfileId,
     String companyCode,
     Boolean active,
-    OffsetDateTime createdAt
+    OffsetDateTime createdAt,
+    OffsetDateTime lastLoginAt,
+    OffsetDateTime lastSeenAt
 ) {
 }
 

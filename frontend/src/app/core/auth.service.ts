@@ -9,6 +9,7 @@ type LoginResponse = {
   email?: string | null;
   role?: UserRole | string | null;
   companyId?: string | null;
+  agencyId?: string | null;
 };
 
 type JwtPayload = {
@@ -16,6 +17,7 @@ type JwtPayload = {
   email?: string;
   cid?: string;
   companyId?: string;
+  agencyId?: string;
   exp?: number;
 };
 
@@ -41,6 +43,10 @@ export class AuthService {
         tap((res) => this.persistLogin(res)),
         map(() => void 0)
       );
+  }
+
+  pingPresence(): Observable<void> {
+    return this.http.post<void>('/api/presence/ping', {}).pipe(map(() => void 0));
   }
 
   recoverCompanyCode(email: string): Observable<{ message?: string }> {
@@ -122,6 +128,18 @@ export class AuthService {
     const payload = this.decodeJwt();
     const companyId = payload?.companyId ?? payload?.cid;
     return typeof companyId === 'string' && companyId.length > 0 ? companyId : null;
+  }
+
+  getAgencyId(): string | null {
+    const agencyId = this.decodeJwt()?.agencyId;
+    return typeof agencyId === 'string' && agencyId.length > 0 ? agencyId : null;
+  }
+
+  getEmail(): string | null {
+    const storedEmail = localStorage.getItem(this.userEmailKey);
+    if (storedEmail && storedEmail.trim()) return storedEmail;
+    const tokenEmail = this.decodeJwt()?.email;
+    return typeof tokenEmail === 'string' && tokenEmail.trim() ? tokenEmail : null;
   }
 
   getDisplayName(): string | null {
