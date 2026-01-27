@@ -28,7 +28,7 @@ public class PresenceController {
             return ResponseEntity.status(401).build();
         }
 
-        UUID userId = user.id();
+        UUID userId = user.userId();
         User entity = userRepository.findById(userId).orElse(null);
         if (entity == null) {
             return ResponseEntity.notFound().build();

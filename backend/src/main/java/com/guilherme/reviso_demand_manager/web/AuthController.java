@@ -3,7 +3,6 @@ package com.guilherme.reviso_demand_manager.web;
 import com.guilherme.reviso_demand_manager.application.AgencyCodeRecoveryService;
 import com.guilherme.reviso_demand_manager.application.AgencyPasswordRecoveryService;
 import com.guilherme.reviso_demand_manager.application.CompanyCodeRecoveryService;
-import com.guilherme.reviso_demand_manager.domain.Agency;
 import com.guilherme.reviso_demand_manager.domain.Company;
 import com.guilherme.reviso_demand_manager.domain.CompanyType;
 import com.guilherme.reviso_demand_manager.domain.User;
@@ -70,8 +69,6 @@ public class AuthController {
                                                     HttpServletRequest request) {
         String clientIp = getClientIp(request);
         String normalizedEmail = normalizeEmail(dto.email());
-        String normalizedAgencyCode = normalizeAgencyCode(dto.agencyCode());
-        
         // Limitacao de taxa: IP + Email
         if (!rateLimitService.isAllowed("login:ip:" + clientIp)) {
             throw new TooManyRequestsException("Muitas tentativas de login. Aguarde 1 minuto.");
@@ -93,12 +90,6 @@ public class AuthController {
 
         if (user.getAgencyId() == null) {
             throw new UnauthorizedException("Credenciais invalidas");
-        }
-
-        Agency agency = agencyRepository.findById(user.getAgencyId())
-            .orElseThrow(() -> new UnauthorizedException("Codigo da agencia invalido"));
-        if (!normalizeAgencyCode(agency.getAgencyCode()).equals(normalizedAgencyCode)) {
-            throw new UnauthorizedException("Codigo da agencia invalido");
         }
 
         if (!passwordEncoder.matches(dto.password(), user.getPasswordHash())) {

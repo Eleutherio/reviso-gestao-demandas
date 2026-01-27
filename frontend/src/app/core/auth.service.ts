@@ -29,8 +29,8 @@ export class AuthService {
 
   constructor(private readonly http: HttpClient) {}
 
-  login(email: string, password: string, agencyCode: string): Observable<void> {
-    return this.http.post<LoginResponse>('/api/auth/login', { email, password, agencyCode }).pipe(
+  login(email: string, password: string): Observable<void> {
+    return this.http.post<LoginResponse>('/api/auth/login', { email, password }).pipe(
       tap((res) => this.persistLogin(res)),
       map(() => void 0)
     );

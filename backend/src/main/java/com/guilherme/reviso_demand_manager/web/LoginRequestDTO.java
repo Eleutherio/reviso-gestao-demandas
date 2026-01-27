@@ -8,9 +8,6 @@ public record LoginRequestDTO(
     @Email(message = "Email invalido")
     String email,
 
-    @NotBlank(message = "Codigo da agencia e obrigatorio")
-    String agencyCode,
-
     @NotBlank(message = "Senha e obrigatoria")
     String password
 ) {
