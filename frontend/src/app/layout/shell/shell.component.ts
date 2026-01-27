@@ -64,7 +64,7 @@ export class ShellComponent implements OnInit, OnDestroy {
     { label: 'Requisições', path: '/agency/requests', roles: ['AGENCY_USER', 'AGENCY_ADMIN'] },
     { label: 'Relatórios', path: '/agency/reports', roles: ['AGENCY_USER', 'AGENCY_ADMIN'] },
 
-    { label: 'Empresas', path: '/admin/companies', roles: ['AGENCY_ADMIN'] },
+    { label: 'Administrar Clientes', path: '/admin/companies', roles: ['AGENCY_ADMIN'] },
     { label: 'Administrar Usuários', path: '/admin/users', roles: ['AGENCY_ADMIN'] },
   ];
 
