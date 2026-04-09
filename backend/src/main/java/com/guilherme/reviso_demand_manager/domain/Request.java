@@ -26,6 +26,9 @@ public class Request {
     @Column(columnDefinition = "UUID")
     private UUID id;
 
+    @Column(name = "agency_id", columnDefinition = "UUID")
+    private UUID agencyId;
+
     @Column(name = "company_id", nullable = false, columnDefinition = "UUID")
     private UUID companyId;
 
@@ -98,6 +101,14 @@ public class Request {
 
     public void setId(UUID id) {
         this.id = id;
+    }
+
+    public UUID getAgencyId() {
+        return agencyId;
+    }
+
+    public void setAgencyId(UUID agencyId) {
+        this.agencyId = agencyId;
     }
 
     public UUID getCompanyId() {

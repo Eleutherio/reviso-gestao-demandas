@@ -52,11 +52,12 @@ public class CompanyCodeRecoveryService {
 
         if (!Boolean.TRUE.equals(user.getActive())
             || user.getRole() != UserRole.CLIENT_USER
-            || user.getCompanyId() == null) {
+            || user.getCompanyId() == null
+            || user.getAgencyId() == null) {
             return List.of();
         }
 
-        Company company = companyRepository.findById(user.getCompanyId()).orElse(null);
+        Company company = companyRepository.findByIdAndAgencyId(user.getCompanyId(), user.getAgencyId()).orElse(null);
         if (company == null
             || !Boolean.TRUE.equals(company.getActive())
             || company.getType() != CompanyType.CLIENT

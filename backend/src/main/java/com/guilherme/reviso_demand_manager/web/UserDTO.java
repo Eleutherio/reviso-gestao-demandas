@@ -9,8 +9,14 @@ public record UserDTO(
     String fullName,
     String email,
     UserRole role,
+    UUID agencyId,
     UUID companyId,
+    UUID accessProfileId,
+    String companyCode,
     Boolean active,
-    OffsetDateTime createdAt
+    OffsetDateTime createdAt,
+    OffsetDateTime lastLoginAt,
+    OffsetDateTime lastSeenAt
 ) {
 }
+

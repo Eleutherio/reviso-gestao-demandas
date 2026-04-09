@@ -19,6 +19,9 @@ public record UpdateUserDTO(
     UserRole role,
 
     UUID companyId,
+    String companyCode,
+    UUID accessProfileId,
     Boolean active
 ) {
 }
+

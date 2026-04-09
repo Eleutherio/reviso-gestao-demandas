@@ -31,11 +31,23 @@ public class User {
     @Column(name = "company_id", columnDefinition = "UUID")
     private UUID companyId;
 
+    @Column(name = "agency_id", columnDefinition = "UUID")
+    private UUID agencyId;
+
+    @Column(name = "access_profile_id", columnDefinition = "UUID")
+    private UUID accessProfileId;
+
     @Column(nullable = false)
     private Boolean active;
 
     @Column(name = "created_at", nullable = false)
     private OffsetDateTime createdAt;
+
+    @Column(name = "last_login_at")
+    private OffsetDateTime lastLoginAt;
+
+    @Column(name = "last_seen_at")
+    private OffsetDateTime lastSeenAt;
 
     public UUID getId() {
         return id;
@@ -85,6 +97,22 @@ public class User {
         this.companyId = companyId;
     }
 
+    public UUID getAgencyId() {
+        return agencyId;
+    }
+
+    public void setAgencyId(UUID agencyId) {
+        this.agencyId = agencyId;
+    }
+
+    public UUID getAccessProfileId() {
+        return accessProfileId;
+    }
+
+    public void setAccessProfileId(UUID accessProfileId) {
+        this.accessProfileId = accessProfileId;
+    }
+
     public Boolean getActive() {
         return active;
     }
@@ -99,5 +127,21 @@ public class User {
 
     public void setCreatedAt(OffsetDateTime createdAt) {
         this.createdAt = createdAt;
+    }
+
+    public OffsetDateTime getLastLoginAt() {
+        return lastLoginAt;
+    }
+
+    public void setLastLoginAt(OffsetDateTime lastLoginAt) {
+        this.lastLoginAt = lastLoginAt;
+    }
+
+    public OffsetDateTime getLastSeenAt() {
+        return lastSeenAt;
+    }
+
+    public void setLastSeenAt(OffsetDateTime lastSeenAt) {
+        this.lastSeenAt = lastSeenAt;
     }
 }

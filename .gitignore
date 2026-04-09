@@ -134,6 +134,8 @@ application-local.properties
 application-local.yml
 application-dev.properties
 application-dev.yml
+application-demo.properties
+application-demo.yml
 *-local.properties
 *-local.yml
 

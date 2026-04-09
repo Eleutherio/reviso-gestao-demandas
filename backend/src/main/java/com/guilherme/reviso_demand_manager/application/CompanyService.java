@@ -2,7 +2,11 @@ package com.guilherme.reviso_demand_manager.application;
 
 import com.guilherme.reviso_demand_manager.domain.Company;
 import com.guilherme.reviso_demand_manager.domain.CompanyType;
+import com.guilherme.reviso_demand_manager.domain.Subscription;
+import com.guilherme.reviso_demand_manager.domain.SubscriptionPlan;
 import com.guilherme.reviso_demand_manager.infra.CompanyRepository;
+import com.guilherme.reviso_demand_manager.infra.SubscriptionPlanRepository;
+import com.guilherme.reviso_demand_manager.infra.SubscriptionRepository;
 import com.guilherme.reviso_demand_manager.web.CompanyDTO;
 import com.guilherme.reviso_demand_manager.web.CreateCompanyDTO;
 import com.guilherme.reviso_demand_manager.web.ResourceNotFoundException;
@@ -20,16 +24,29 @@ import java.util.UUID;
 public class CompanyService {
 
     private final CompanyRepository companyRepository;
+    private final SubscriptionRepository subscriptionRepository;
+    private final SubscriptionPlanRepository subscriptionPlanRepository;
 
-    public CompanyService(CompanyRepository companyRepository) {
+    public CompanyService(
+            CompanyRepository companyRepository,
+            SubscriptionRepository subscriptionRepository,
+            SubscriptionPlanRepository subscriptionPlanRepository
+    ) {
         this.companyRepository = companyRepository;
+        this.subscriptionRepository = subscriptionRepository;
+        this.subscriptionPlanRepository = subscriptionPlanRepository;
     }
 
     @Transactional
-    public CompanyDTO createCompany(CreateCompanyDTO dto) {
+    public CompanyDTO createCompany(CreateCompanyDTO dto, UUID agencyId) {
+        if (agencyId == null) {
+            throw new IllegalArgumentException("agencyId is required");
+        }
+        enforceCompanyLimit(agencyId);
         Company company = new Company();
         company.setId(UUID.randomUUID());
-        company.setCompanyCode(generateCompanyCode(dto.name(), dto.type(), dto.segment()));
+        company.setAgencyId(agencyId);
+        company.setCompanyCode(generateCompanyCode(dto.name(), dto.type(), dto.segment(), agencyId));
         company.setName(dto.name());
         company.setType(dto.type());
         company.setActive(true);
@@ -44,24 +61,33 @@ public class CompanyService {
     }
 
     @Transactional(readOnly = true)
-    public List<CompanyDTO> listAllCompanies() {
-        return companyRepository.findAll().stream()
+    public List<CompanyDTO> listAllCompanies(UUID agencyId) {
+        if (agencyId == null) {
+            throw new IllegalArgumentException("agencyId is required");
+        }
+        return companyRepository.findByAgencyIdOrderByNameAsc(agencyId).stream()
                 .map(this::toDTO)
                 .toList();
     }
 
     @Transactional(readOnly = true)
-    public List<CompanyDTO> listClientCompanies() {
-        return companyRepository.findByTypeOrderByNameAsc(CompanyType.CLIENT)
+    public List<CompanyDTO> listClientCompanies(UUID agencyId) {
+        if (agencyId == null) {
+            throw new IllegalArgumentException("agencyId is required");
+        }
+        return companyRepository.findByAgencyIdAndTypeOrderByNameAsc(agencyId, CompanyType.CLIENT)
                 .stream()
                 .map(this::toDTO)
                 .toList();
     }
 
     @Transactional
-    public CompanyDTO updateCompany(UUID companyId, UpdateCompanyDTO dto) {
-        Company company = companyRepository.findById(companyId)
-                .orElseThrow(() -> new ResourceNotFoundException("Empresa não encontrada"));
+    public CompanyDTO updateCompany(UUID companyId, UpdateCompanyDTO dto, UUID agencyId) {
+        if (agencyId == null) {
+            throw new IllegalArgumentException("agencyId is required");
+        }
+        Company company = companyRepository.findByIdAndAgencyId(companyId, agencyId)
+                .orElseThrow(() -> new ResourceNotFoundException("Empresa nao encontrada"));
 
         if (dto.name() != null) {
             company.setName(blankToNull(dto.name()));
@@ -99,6 +125,7 @@ public class CompanyService {
     private CompanyDTO toDTO(Company company) {
         return new CompanyDTO(
                 company.getId(),
+                company.getAgencyId(),
                 company.getCompanyCode(),
                 company.getName(),
                 company.getType(),
@@ -111,12 +138,12 @@ public class CompanyService {
         );
     }
 
-    private String generateCompanyCode(String name, CompanyType type, String segment) {
+    private String generateCompanyCode(String name, CompanyType type, String segment, UUID agencyId) {
         String base = buildBaseCode(name, type, segment);
         String candidate = base;
         int suffix = 1;
 
-        while (companyRepository.existsByCompanyCode(candidate)) {
+        while (companyRepository.existsByCompanyCodeAndAgencyId(candidate, agencyId)) {
             candidate = base + "-" + String.format("%02d", suffix);
             suffix++;
         }
@@ -152,5 +179,31 @@ public class CompanyService {
         String decomposed = Normalizer.normalize(value, Normalizer.Form.NFD);
         String withoutMarks = decomposed.replaceAll("\\p{M}", "");
         return withoutMarks.toUpperCase(Locale.ROOT).replaceAll("[^A-Z0-9]", "");
+    }
+
+    private void enforceCompanyLimit(UUID agencyId) {
+        Integer maxCompanies = resolveMaxCompanies(agencyId);
+        if (maxCompanies == null || maxCompanies <= 0) {
+            return;
+        }
+        long current = companyRepository.countByAgencyId(agencyId);
+        if (current >= maxCompanies) {
+            throw new IllegalStateException("Limite do plano atingido");
+        }
+    }
+
+    private Integer resolveMaxCompanies(UUID agencyId) {
+        Subscription subscription = subscriptionRepository.findByAgencyId(agencyId).orElse(null);
+        if (subscription == null) {
+            return null;
+        }
+        SubscriptionPlan plan = subscriptionPlanRepository.findById(subscription.getPlanId()).orElse(null);
+        if (plan == null) {
+            return null;
+        }
+        if (plan.getMaxCompanies() != null) {
+            return plan.getMaxCompanies();
+        }
+        return plan.getMaxUsers();
     }
 }

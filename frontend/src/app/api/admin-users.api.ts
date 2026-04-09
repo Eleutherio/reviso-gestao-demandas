@@ -9,6 +9,8 @@ export interface CreateUserDto {
   password: string;
   role: UserRole;
   companyId?: string | null;
+  companyCode?: string | null;
+  accessProfileId?: string | null;
 }
 
 export interface UpdateUserDto {
@@ -16,6 +18,8 @@ export interface UpdateUserDto {
   email: string;
   role: UserRole;
   companyId?: string | null;
+  companyCode?: string | null;
+  accessProfileId?: string | null;
   active?: boolean | null;
 }
 

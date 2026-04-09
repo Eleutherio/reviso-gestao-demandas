@@ -19,6 +19,7 @@ type NavItem = {
 export class ShellComponent implements OnInit, OnDestroy {
   readonly role: UserRole | null;
   readonly companyId: string | null;
+  readonly displayName: string | null;
   bannerVisivel = false;
   bannerContagem = '';
 
@@ -28,8 +29,16 @@ export class ShellComponent implements OnInit, OnDestroy {
   private readonly inatividadeMs = 15 * 60 * 1000;
   private readonly logoutMs = 20 * 60 * 1000;
   private readonly throttleAtividadeMs = 1000;
+  private readonly presencePingMs = 60000;
   private readonly eventosAtividade = ['mousemove', 'keydown', 'scroll', 'touchstart', 'wheel'];
   private readonly handleAtividade = () => this.registrarAtividade(false);
+  private presenceIntervalId: number | null = null;
+  private lastPresencePingAt = 0;
+  private readonly roleLabels: Record<UserRole, string> = {
+    AGENCY_ADMIN: 'Administrador',
+    AGENCY_USER: 'colaborador',
+    CLIENT_USER: 'empresa',
+  };
 
   private readonly items: NavItem[] = [
     { label: 'Meus Briefings', path: '/client/briefings', roles: ['CLIENT_USER'] },
@@ -58,19 +67,26 @@ export class ShellComponent implements OnInit, OnDestroy {
     { label: 'Requisições', path: '/agency/requests', roles: ['AGENCY_USER', 'AGENCY_ADMIN'] },
     { label: 'Relatórios', path: '/agency/reports', roles: ['AGENCY_USER', 'AGENCY_ADMIN'] },
 
-    { label: 'Empresas', path: '/admin/companies', roles: ['AGENCY_ADMIN'] },
-    { label: 'Usuários', path: '/admin/users', roles: ['AGENCY_ADMIN'] },
+    { label: 'Administrar Clientes', path: '/admin/companies', roles: ['AGENCY_ADMIN'] },
+    { label: 'Administrar Usuários', path: '/admin/users', roles: ['AGENCY_ADMIN'] },
   ];
 
   constructor(private readonly auth: AuthService, private readonly router: Router) {
     this.role = this.auth.getRole();
     this.companyId = this.auth.getCompanyId();
+    this.displayName = this.auth.getDisplayName();
   }
 
   get navItems(): NavItem[] {
     const role = this.role;
     if (!role) return [];
     return this.items.filter((it) => it.roles.includes(role));
+  }
+
+  get roleLabel(): string {
+    const role = this.role;
+    if (!role) return '';
+    return this.roleLabels[role] ?? role;
   }
 
   logout(): void {
@@ -82,11 +98,13 @@ export class ShellComponent implements OnInit, OnDestroy {
     this.ultimaAtividadeEm = Date.now();
     this.vincularEventosAtividade();
     this.iniciarMonitorInatividade();
+    this.iniciarPresence();
   }
 
   ngOnDestroy(): void {
     this.pararMonitorInatividade();
     this.removerEventosAtividade();
+    this.pararPresence();
   }
 
   continuarSessao(): void {
@@ -127,6 +145,9 @@ export class ShellComponent implements OnInit, OnDestroy {
     if (this.bannerVisivel) {
       this.bannerVisivel = false;
     }
+    if (agora - this.lastPresencePingAt >= this.presencePingMs / 2) {
+      this.enviarPresence();
+    }
   }
 
   private atualizarInatividade(): void {
@@ -159,6 +180,30 @@ export class ShellComponent implements OnInit, OnDestroy {
     this.auth.logout();
     this.pararMonitorInatividade();
     this.removerEventosAtividade();
+    this.pararPresence();
     this.router.navigateByUrl('/login');
+  }
+
+  private iniciarPresence(): void {
+    if (!this.auth.isLoggedIn()) return;
+    this.enviarPresence();
+    this.presenceIntervalId = window.setInterval(() => this.enviarPresence(), this.presencePingMs);
+  }
+
+  private pararPresence(): void {
+    if (this.presenceIntervalId !== null) {
+      window.clearInterval(this.presenceIntervalId);
+      this.presenceIntervalId = null;
+    }
+  }
+
+  private enviarPresence(): void {
+    if (!this.auth.isLoggedIn()) return;
+    this.lastPresencePingAt = Date.now();
+    this.auth.pingPresence().subscribe({
+      error: () => {
+        // presença é best-effort; evita ruído no console
+      },
+    });
   }
 }

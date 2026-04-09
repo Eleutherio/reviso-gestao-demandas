@@ -3,27 +3,35 @@ import { HttpClient } from '@angular/common/http';
 import { Observable, map, tap } from 'rxjs';
 import type { UserRole } from './roles';
 
-type LoginResponse = { token: string };
+type LoginResponse = {
+  token: string;
+  fullName?: string | null;
+  email?: string | null;
+  role?: UserRole | string | null;
+  companyId?: string | null;
+  agencyId?: string | null;
+};
 
 type JwtPayload = {
   role?: UserRole | string;
+  email?: string;
   cid?: string;
+  companyId?: string;
+  agencyId?: string;
   exp?: number;
 };
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
   private readonly tokenKey = 'reviso_token';
+  private readonly userNameKey = 'reviso_user_name';
+  private readonly userEmailKey = 'reviso_user_email';
 
   constructor(private readonly http: HttpClient) {}
 
   login(email: string, password: string): Observable<void> {
     return this.http.post<LoginResponse>('/api/auth/login', { email, password }).pipe(
-      map((res) => res?.token),
-      tap((token) => {
-        if (!token) throw new Error('Token ausente no login');
-        localStorage.setItem(this.tokenKey, token);
-      }),
+      tap((res) => this.persistLogin(res)),
       map(() => void 0)
     );
   }
@@ -32,21 +40,43 @@ export class AuthService {
     return this.http
       .post<LoginResponse>('/api/auth/login-client', { companyCode, email, password })
       .pipe(
-        map((res) => res?.token),
-        tap((token) => {
-          if (!token) throw new Error('Token ausente no login');
-          localStorage.setItem(this.tokenKey, token);
-        }),
+        tap((res) => this.persistLogin(res)),
         map(() => void 0)
       );
+  }
+
+  pingPresence(): Observable<void> {
+    return this.http.post<void>('/api/presence/ping', {}).pipe(map(() => void 0));
   }
 
   recoverCompanyCode(email: string): Observable<{ message?: string }> {
     return this.http.post<{ message?: string }>('/api/auth/recover-company-code', { email });
   }
 
+  recoverAgencyCode(email: string): Observable<{ message?: string }> {
+    return this.http.post<{ message?: string }>('/api/auth/recover-agency-code', { email });
+  }
+
+  recoverAgencyPassword(email: string): Observable<{ message?: string }> {
+    return this.http.post<{ message?: string }>('/api/auth/recover-agency-password', { email });
+  }
+
+  confirmAgencyPassword(
+    email: string,
+    token: string,
+    newPassword: string
+  ): Observable<{ message?: string }> {
+    return this.http.post<{ message?: string }>('/api/auth/recover-agency-password/confirm', {
+      email,
+      token,
+      newPassword,
+    });
+  }
+
   logout(): void {
     localStorage.removeItem(this.tokenKey);
+    localStorage.removeItem(this.userNameKey);
+    localStorage.removeItem(this.userEmailKey);
   }
 
   getToken(): string | null {
@@ -95,7 +125,51 @@ export class AuthService {
   }
 
   getCompanyId(): string | null {
-    const cid = this.decodeJwt()?.cid;
-    return typeof cid === 'string' && cid.length > 0 ? cid : null;
+    const payload = this.decodeJwt();
+    const companyId = payload?.companyId ?? payload?.cid;
+    return typeof companyId === 'string' && companyId.length > 0 ? companyId : null;
+  }
+
+  getAgencyId(): string | null {
+    const agencyId = this.decodeJwt()?.agencyId;
+    return typeof agencyId === 'string' && agencyId.length > 0 ? agencyId : null;
+  }
+
+  getEmail(): string | null {
+    const storedEmail = localStorage.getItem(this.userEmailKey);
+    if (storedEmail && storedEmail.trim()) return storedEmail;
+    const tokenEmail = this.decodeJwt()?.email;
+    return typeof tokenEmail === 'string' && tokenEmail.trim() ? tokenEmail : null;
+  }
+
+  getDisplayName(): string | null {
+    const storedName = localStorage.getItem(this.userNameKey);
+    if (storedName && storedName.trim()) return storedName;
+
+    const storedEmail = localStorage.getItem(this.userEmailKey);
+    if (storedEmail && storedEmail.trim()) return storedEmail;
+
+    const tokenEmail = this.decodeJwt()?.email;
+    return typeof tokenEmail === 'string' && tokenEmail.trim() ? tokenEmail : null;
+  }
+
+  private persistLogin(res: LoginResponse | null | undefined): void {
+    const token = res?.token;
+    if (!token) throw new Error('Token ausente no login');
+    localStorage.setItem(this.tokenKey, token);
+
+    const fullName = res?.fullName?.trim() ?? '';
+    if (fullName) {
+      localStorage.setItem(this.userNameKey, fullName);
+    } else {
+      localStorage.removeItem(this.userNameKey);
+    }
+
+    const email = res?.email?.trim() ?? this.decodeJwt(token)?.email ?? '';
+    if (email) {
+      localStorage.setItem(this.userEmailKey, email);
+    } else {
+      localStorage.removeItem(this.userEmailKey);
+    }
   }
 }

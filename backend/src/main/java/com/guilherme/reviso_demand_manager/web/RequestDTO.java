@@ -10,6 +10,7 @@ import java.util.UUID;
 
 public record RequestDTO(
     UUID id,
+    UUID agencyId,
     UUID companyId,
     String companyName,
     UUID briefingId,

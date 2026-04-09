@@ -1,39 +1,52 @@
 services:
   postgres:
     image: postgres:16-alpine
-    container_name: reviso-postgres
+    container_name: reviso-postgres-demo
+    user: postgres
     environment:
       POSTGRES_DB: ${DB_NAME:-reviso}
       POSTGRES_USER: ${DB_USER:-reviso}
-      POSTGRES_PASSWORD: ${DB_PASSWORD:-reviso123}
-    ports:
-      - "${DB_PORT:-5433}:5432"
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_INITDB_ARGS: "--auth-host=scram-sha-256"
+    # SEM porta exposta - apenas rede interna
     volumes:
-      - reviso_pgdata:/var/lib/postgresql/data
+      - reviso_pgdata_demo:/var/lib/postgresql/data:rw
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U reviso"]
       interval: 10s
       timeout: 5s
       retries: 5
     networks:
-      - reviso-network
+      - reviso-network-demo
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    read_only: false
+    tmpfs:
+      - /tmp
+      - /run
 
   backend:
     image: maven:3.9-eclipse-temurin-21-alpine
-    container_name: reviso-backend
+    container_name: reviso-backend-demo
     working_dir: /app
+    user: "1000:1000"
     volumes:
-      - ./backend:/app
-      - reviso_m2_cache:/root/.m2
+      - ../../backend:/app
+      - reviso_m2_cache_demo:/root/.m2
     environment:
+      SPRING_PROFILES_ACTIVE: demo
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${DB_NAME:-reviso}
       SPRING_DATASOURCE_USERNAME: ${DB_USER:-reviso}
-      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD:-reviso123}
-      JWT_SECRET: ${JWT_SECRET:-your-secret-key-change-in-production-min-256-bits}
+      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET}
       SERVER_PORT: ${API_PORT:-8080}
-      FRONTEND_BASE_URL: ${FRONTEND_BASE_URL:-http://localhost:4200}
-      RESEND_API_KEY: ${RESEND_API_KEY:-}
-      RESEND_FROM: ${RESEND_FROM:-}
+      FRONTEND_BASE_URL: ${FRONTEND_BASE_URL}
+      STRIPE_API_KEY: ${STRIPE_API_KEY}
+      STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET}
+      RESEND_API_KEY: ${RESEND_API_KEY}
+      RESEND_FROM: ${RESEND_FROM}
+      MAIL_REPLY_TO: ${MAIL_REPLY_TO}
       RESEND_BASE_URL: ${RESEND_BASE_URL:-https://api.resend.com}
       RESEND_TIMEOUT_SECONDS: ${RESEND_TIMEOUT_SECONDS:-10}
       EMAIL_QUEUE_MAX_ATTEMPTS: ${EMAIL_QUEUE_MAX_ATTEMPTS:-5}
@@ -41,37 +54,23 @@ services:
       EMAIL_QUEUE_QUOTA_DELAY_MINUTES: ${EMAIL_QUEUE_QUOTA_DELAY_MINUTES:-60}
       EMAIL_QUEUE_BATCH_SIZE: ${EMAIL_QUEUE_BATCH_SIZE:-20}
       EMAIL_QUEUE_FIXED_DELAY_MS: ${EMAIL_QUEUE_FIXED_DELAY_MS:-30000}
+    # Bind apenas localhost - Nginx faz proxy
     ports:
-      - "${API_PORT:-8080}:8080"
+      - "127.0.0.1:${API_PORT:-8080}:8080"
     depends_on:
       postgres:
         condition: service_healthy
     networks:
-      - reviso-network
+      - reviso-network-demo
     command: mvn -B -ntp spring-boot:run
     restart: unless-stopped
-
-  frontend:
-    image: node:20-alpine
-    container_name: reviso-frontend
-    working_dir: /app
-    volumes:
-      - ./frontend:/app
-      - reviso_node_modules:/app/node_modules
-    depends_on:
-      - backend
-    ports:
-      - "${FRONTEND_PORT:-4200}:4200"
-    networks:
-      - reviso-network
-    command: sh -c "npm install && npm start -- --host 0.0.0.0 --proxy-config proxy.docker.conf.json --poll=2000"
-    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
 
 volumes:
-  reviso_pgdata:
-  reviso_m2_cache:
-  reviso_node_modules:
+  reviso_pgdata_demo:
+  reviso_m2_cache_demo:
 
 networks:
-  reviso-network:
+  reviso-network-demo:
     driver: bridge

@@ -69,6 +69,62 @@
       <div class="error login__hint" *ngIf="recoverError">{{ recoverError }}</div>
     </div>
 
+    <div class="login__recover" *ngIf="portal === 'agency'">
+      <button class="link" type="button" (click)="toggleAgencyRecover()">
+        Esqueci minha senha
+      </button>
+
+      <div class="login__recover-form" *ngIf="agencyRecoverVisible">
+        <form
+          [formGroup]="agencyRecoverForm"
+          (ngSubmit)="requestAgencyPasswordToken()"
+          class="login__form"
+        >
+          <label class="field">
+            <span class="field__label">Email da agencia</span>
+            <input class="field__input" type="email" formControlName="email" autocomplete="email" />
+          </label>
+
+          <button class="btn btn--ghost" type="submit" [disabled]="agencyRecovering">
+            {{ agencyRecovering ? 'Enviando...' : 'Enviar token' }}
+          </button>
+        </form>
+
+        <form
+          [formGroup]="agencyResetForm"
+          (ngSubmit)="confirmAgencyPasswordToken()"
+          class="login__form"
+        >
+          <label class="field">
+            <span class="field__label">Email da agencia</span>
+            <input class="field__input" type="email" formControlName="email" autocomplete="email" />
+          </label>
+          <label class="field">
+            <span class="field__label">Token</span>
+            <input class="field__input" type="text" formControlName="token" autocomplete="one-time-code" />
+          </label>
+          <label class="field">
+            <span class="field__label">Nova senha</span>
+            <input
+              class="field__input"
+              type="password"
+              formControlName="newPassword"
+              autocomplete="new-password"
+            />
+          </label>
+
+          <button class="btn btn--ghost" type="submit" [disabled]="agencyResetting">
+            {{ agencyResetting ? 'Salvando...' : 'Atualizar senha' }}
+          </button>
+        </form>
+      </div>
+
+      <div class="success login__hint" *ngIf="agencyRecoverMessage">{{ agencyRecoverMessage }}</div>
+      <div class="success login__hint" *ngIf="agencyResetMessage">{{ agencyResetMessage }}</div>
+      <div class="error login__hint" *ngIf="agencyRecoverError">{{ agencyRecoverError }}</div>
+      <div class="error login__hint" *ngIf="agencyResetError">{{ agencyResetError }}</div>
+    </div>
+
     <div class="error login__hint" *ngIf="error">{{ error }}</div>
   </div>
 </div>
