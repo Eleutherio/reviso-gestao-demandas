@@ -1,91 +1,28 @@
-# Reviso Demand Manager
+<img width="990" height="580" alt="Reviso" src="https://github.com/user-attachments/assets/b27b0d00-6b57-407b-8983-f8ec4fa5b2c4" />
 
-B2B demand management system for advertising agencies. Tracks client requests from briefing to delivery with audit trail and metrics.
+O Reviso é uma plataforma B2B multi-tenant de gestão de demandas criativas voltado para agências de publicidade e estúdios criativos que atendem múltiplas empresas clientes.
 
-**Stack**: Java 21, Spring Boot 4.0.1, PostgreSQL 16, Angular 19
+## Atividade do Projeto
 
-## Quick Start
+O projeto já tem requisitos e arquitetura definidos e está em fase final de prototipação.
 
-### Development (localhost)
-```bash
-cd infra/dev
-cp .env.dev.example .env.dev
-# Edit .env.dev and set DB_PASSWORD
+## Motivação
 
-docker compose -f docker-compose.dev.yml up -d --build
+O Reviso surgiu a partir das dificuldades que minha companheira enfrentava na agência com o software de gestão. Ela trazia os problemas do dia a dia e eu transformei isso em produto: eu desenvolvo, e ela valida e direciona como stakeholder.
 
-# Seed database
-docker compose -f docker-compose.dev.yml exec -T postgres \
-  psql -U reviso -d reviso < ../../db/seed_data.sql
-```
+## O que ele resolve
 
-- Frontend: http://localhost:4200
-- Backend: http://localhost:8080
-- PostgreSQL: localhost:5433
+- Organização e transparência: permite que empresas clientes tenham seu próprio ambiente para envio de briefings e consulta das suas requisições, eliminando ruídos de comunicação e perda de arquivos importantes.
+- Centraliza pedidos (peças, campanhas, landing pages etc.), controla status, prazos e revisões e permite enxergar gargalos e atrasos.
+- UI organizada e simples, tornando a experiência do time criativo mais produtiva.
 
-### Demo/Production (public)
-```bash
-cd infra/demo
-cp .env.demo.example .env.demo
-# Edit .env.demo with real values
+## Tecnologias
 
-# Setup Nginx + SSL
-chmod +x nginx/setup.sh
-./nginx/setup.sh
+- Java 21, Spring Boot 4.0.1 (Web MVC, Data JPA, Validation, Actuator)
+- PostgreSQL 16 + Flyway para migrations
+- Maven para build
+- Angular em `frontend/` (frontend oficial)
 
-# Deploy
-chmod +x deploy-demo.sh
-./deploy-demo.sh
+## Licença
 
-# Hardening (SSH + Database)
-chmod +x harden-ssh.sh setup-db-security.sh
-./harden-ssh.sh
-./setup-db-security.sh
-```
-
-- API: https://api.seudominio.com
-
-## Project Structure
-
-```
-backend/          Spring Boot API
-frontend/         Angular SPA
-infra/
-  dev/            Development environment
-  demo/           Demo/production environment
-docs/             Documentation
-db/               Database seeds
-```
-
-## Environments
-
-| Environment | Profile | CORS | Logs | DB Port | Nginx |
-|-------------|---------|------|------|---------|-------|
-| **Dev** | `dev` | localhost | DEBUG | 5433 | No |
-| **Demo** | `demo` | Domain only | INFO | Not exposed | Yes |
-
-## Documentation
-
-- [Architecture](docs/ARCHITECTURE.md) - System architecture and multi-tenancy
-- [API Reference](docs/API.md) - Endpoints and examples
-- [Onboarding Flow](docs/ONBOARDING.md) - SaaS signup with Stripe
-- [Security](docs/SECURITY.md) - Auth, webhooks, secrets, rate limiting
-- [Deployment](docs/DEPLOY.md) - Production setup
-- [Runbook](docs/RUNBOOK.md) - Troubleshooting guide
-- [Infrastructure](infra/README.md) - Environment setup
-
-### Security Guides
-- [Security Checklist](docs/SECURITY_CHECKLIST_DEMO.md) - Complete demo checklist
-- [Rate Limiting](docs/SECURITY_RATE_LIMITING.md) - Strategy and monitoring
-- [HTTP Hardening](docs/SECURITY_HTTP_HARDENING.md) - Security headers
-
-## Request Workflow
-
-```
-NEW → IN_PROGRESS → IN_REVIEW → CHANGES_REQUESTED ↔ IN_PROGRESS
-                              → APPROVED → DELIVERED → CLOSED
-```
-
-## License
-
-Private/Experimental
+Projeto privado/experimental (licença não definida).
